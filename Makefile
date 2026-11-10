@@ -12,3 +12,12 @@ notice:
 # for verifying locally before pushing.
 notice-check:
 	uv run python scripts/generate-notice.py --check
+
+# --- Access Governance Gateway (fork-only) ---------------------------------
+.PHONY: gateway-test
+
+# Run the fork-only gateway unit suite. Uses the isolated gateway/pytest.ini so
+# it does not inherit upstream APM markers/addopts. Pure-stdlib tests run
+# without network or extra dependencies.
+gateway-test:
+	PYTHONPATH=. python -m pytest -c pytest-gateway.ini
