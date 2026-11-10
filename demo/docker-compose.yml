@@ -1,0 +1,56 @@
+# Northwind Advisory lab for the Access Governance Gateway (task 14).
+#
+# Cloud-agnostic: OPA (PDP), Keycloak (OIDC, default IdP), an OpenTelemetry
+# collector (evidence sink), and the gateway. Synthetic data only; no employer
+# branding. Entra is NOT required -- Keycloak is the default lab IdP.
+#
+# This compose runs the full lab where Docker is available. The offline demo
+# (`python -m demo.scenario` via `make demo`) exercises the same five-stage flow
+# in-process and produces the evidence the reports consume.
+services:
+  opa:
+    image: openpolicyagent/opa:1.22.3
+    command:
+      - "run"
+      - "--server"
+      - "--addr=0.0.0.0:8181"
+      - "/policy"
+    volumes:
+      - ../policy/opa:/policy:ro
+    ports:
+      - "8181:8181"
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:25.0
+    command: ["start-dev", "--import-realm"]
+    environment:
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+    volumes:
+      - ./keycloak/northwind-realm.json:/opt/keycloak/data/import/northwind-realm.json:ro
+    ports:
+      - "8080:8080"
+
+  otel-collector:
+    image: otel/opentelemetry-collector:0.110.0
+    command: ["--config=/etc/otelcol/config.yaml"]
+    volumes:
+      - ./otel/collector-config.yaml:/etc/otelcol/config.yaml:ro
+    ports:
+      - "4317:4317"
+      - "4318:4318"
+
+  gateway:
+    build:
+      context: ..
+      dockerfile: demo/gateway.Dockerfile
+    depends_on:
+      - opa
+      - keycloak
+      - otel-collector
+    environment:
+      GATEWAY_OPA_URL: http://opa:8181
+      GATEWAY_OIDC_JWKS_URL: http://keycloak:8080/realms/northwind/protocol/openid-connect/certs
+      GATEWAY_OTLP_ENDPOINT: http://otel-collector:4318
+    ports:
+      - "9090:9090"

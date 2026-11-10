@@ -1,0 +1,46 @@
+{
+  "realm": "northwind",
+  "enabled": true,
+  "comment": "Synthetic Northwind Advisory realm for the lab. No real users.",
+  "groups": [
+    { "name": "advisors" },
+    { "name": "partners" },
+    { "name": "finance" },
+    { "name": "analysts" }
+  ],
+  "users": [
+    {
+      "username": "consultant1",
+      "enabled": true,
+      "email": "consultant1@northwind.example",
+      "credentials": [{ "type": "password", "value": "demo", "temporary": false }],
+      "attributes": { "role": ["advisor"], "department": ["advisory"], "seniority": ["senior"] },
+      "groups": ["/advisors"]
+    },
+    {
+      "username": "partner1",
+      "enabled": true,
+      "email": "partner1@northwind.example",
+      "credentials": [{ "type": "password", "value": "demo", "temporary": false }],
+      "attributes": { "role": ["partner"], "department": ["advisory"], "seniority": ["partner"] },
+      "groups": ["/partners"]
+    },
+    {
+      "username": "intern1",
+      "enabled": true,
+      "email": "intern1@northwind.example",
+      "credentials": [{ "type": "password", "value": "demo", "temporary": false }],
+      "attributes": { "role": ["analyst"], "department": ["research"], "seniority": ["junior"] },
+      "groups": ["/analysts"]
+    }
+  ],
+  "clients": [
+    {
+      "clientId": "access-governance-gateway",
+      "enabled": true,
+      "publicClient": true,
+      "directAccessGrantsEnabled": true,
+      "redirectUris": ["*"]
+    }
+  ]
+}

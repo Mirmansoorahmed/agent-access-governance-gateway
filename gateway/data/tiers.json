@@ -1,0 +1,86 @@
+{
+  "governance": {
+    "access": [
+      {
+        "groups": [
+          "advisors",
+          "partners"
+        ],
+        "server": "crm",
+        "tool": "lookup_client"
+      },
+      {
+        "groups": [
+          "partners"
+        ],
+        "server": "crm",
+        "tool": "export_clients"
+      },
+      {
+        "groups": [
+          "advisors",
+          "partners",
+          "finance"
+        ],
+        "server": "billing",
+        "tool": "read_invoice"
+      },
+      {
+        "groups": [
+          "finance"
+        ],
+        "server": "billing",
+        "tool": "issue_refund"
+      },
+      {
+        "groups": [
+          "advisors",
+          "partners",
+          "analysts"
+        ],
+        "server": "research",
+        "tool": "web_search"
+      },
+      {
+        "groups": [
+          "partners"
+        ],
+        "server": "crm",
+        "tool": "bulk_delete"
+      }
+    ],
+    "default_tier": "deny",
+    "tiers": [
+      {
+        "server": "crm",
+        "tier": "allow",
+        "tool": "lookup_client"
+      },
+      {
+        "server": "crm",
+        "tier": "four-eyes",
+        "tool": "export_clients"
+      },
+      {
+        "server": "billing",
+        "tier": "allow",
+        "tool": "read_invoice"
+      },
+      {
+        "server": "billing",
+        "tier": "break-glass",
+        "tool": "issue_refund"
+      },
+      {
+        "server": "research",
+        "tier": "ask",
+        "tool": "web_search"
+      },
+      {
+        "server": "crm",
+        "tier": "deny",
+        "tool": "bulk_delete"
+      }
+    ]
+  }
+}

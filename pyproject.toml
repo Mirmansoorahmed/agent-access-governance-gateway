@@ -58,6 +58,12 @@ dev = [
 build = [
     "pyinstaller>=6.17.0",
 ]
+# Fork-only: PDF rendering for the audit report pack (task 11). PDF reports are
+# a required deliverable; this pulls the pure-Python renderer used by
+# scripts/render_reports.py (`make reports`).
+reports = [
+    "reportlab>=4.0.0",
+]
 
 [project.scripts]
 apm = "apm_cli.entrypoint:main"
@@ -127,6 +133,18 @@ known-first-party = ["apm_cli"]
 # Tests: assert is expected; security rules produce false positives on fixtures;
 # F821 undefined-name from TYPE_CHECKING + PEP 563 deferred annotations
 "tests/**" = ["S101", "S105", "S106", "S108", "S110", "S112", "S603", "S607"]
+# Fork-only gateway tests follow the same test-file relaxations as upstream tests.
+"gateway/tests/**" = ["S101", "S105", "S106", "S108", "S110", "S112", "S603", "S607"]
+# Gateway shells out to the pinned `opa` binary with a fixed argv, mirroring how
+# upstream src/apm_cli/** is allowed to call subprocess.
+"gateway/opa_client.py" = ["S603", "S607"]
+"scripts/sync_opa_data.py" = ["S101"]
+# render_reports shells out to `git` for provenance, like upstream scripts.
+"scripts/render_reports.py" = ["S603", "S607"]
+# The eval runner shells out to `git` (provenance) and `opa` (real PDP run);
+# S106 is a false positive on token_override= (a synthetic JWT string).
+"eval/runner.py" = ["S603", "S607", "S106"]
+"eval/__main__.py" = ["S603", "S607"]
 # Files using `from __future__ import annotations` with forward-reference-only
 # type imports (PEP 563). Ruff cannot resolve these without a type checker.
 "src/apm_cli/policy/ci_checks.py" = ["F821", "S603", "S607"]

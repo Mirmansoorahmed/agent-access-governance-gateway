@@ -1,0 +1,31 @@
+# Sample APM org policy for the Northwind Advisory demo (synthetic).
+#
+# This is the SAME file APM uses at install / `apm audit --ci` AND that the
+# runtime gateway re-reads (one policy, two enforcement points). The gateway's
+# Check 1 allowlist and the reports' "policy version" come from here. The
+# onboarding flow (demo stage 2) proposes a PR that adds a new server to
+# `mcp.allow` in this file.
+#
+# Fictional firm: Northwind Advisory. No real client data.
+name: northwind-advisory
+version: "1.0.0"
+
+# Install-time + runtime MCP allowlist. Deny wins over allow.
+mcp:
+  allow:
+    - crm/*
+    - billing/*
+  deny:
+    - legal/*
+  transport:
+    allow:
+      - streamable-http
+      - stdio
+
+# APM dependency policy (unchanged upstream semantics).
+dependencies:
+  require_pinned_constraint: true
+
+# Tighten-only inheritance: this repo policy may be layered under an org or
+# enterprise policy without loosening anything.
+enforcement: block
