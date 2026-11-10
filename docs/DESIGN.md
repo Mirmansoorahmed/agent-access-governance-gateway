@@ -2,7 +2,7 @@
 
 **Design note (v0.1)** · Portfolio project by Mir Mansoor Ahmed  
 **Status:** design · fictional firm in examples: *Northwind Advisory*  
-**Upstream:** fork of [microsoft/apm](https://github.com/microsoft/apm) (MIT) · this document describes the fork’s intended additions only
+**Upstream:** fork of [microsoft/apm](https://github.com/microsoft/apm) (Apache-2.0 software · CC-BY-4.0 docs; historical MIT in `NOTICE`) · this document describes the fork’s intended additions only
 
 ---
 
@@ -139,9 +139,9 @@ All figures will be measured in-repo with a scripted eval and published with met
 
 ## Fork hygiene and license
 
-Upstream [microsoft/apm](https://github.com/microsoft/apm) is **MIT** (Copyright (c) Microsoft Corporation). This fork will:
+Upstream [microsoft/apm](https://github.com/microsoft/apm) is licensed **Apache-2.0** for software and **CC-BY-4.0** for general documentation (Copyright (c) Microsoft Corporation); previously published MIT releases remain available under their original terms, with the historical MIT notice retained in `NOTICE`. This fork will:
 
-1. Keep the upstream MIT copyright and license notice in all substantial portions.  
+1. Keep the upstream copyright and license notices (Apache-2.0 / CC-BY-4.0, plus the historical MIT `NOTICE`) in all substantial portions.  
 2. Track `upstream/main` with periodic merges; pin the forked APM CLI version in CI.  
 3. Isolate fork-only code under clear paths (e.g. `gateway/`, `policies/runtime/`, `reports/`) so upstream merges stay reviewable.  
 4. Document fork additions in this `DESIGN.md` and the README; do not present upstream behaviour as our invention.  
@@ -149,4 +149,4 @@ Upstream [microsoft/apm](https://github.com/microsoft/apm) is **MIT** (Copyright
 
 ---
 
-*Sources consulted for APM facts: microsoft/apm README; Governance deep-dive (incl. §§2, 4, 5, 8, 14); Policy files page; apm audit CLI reference; LICENSE (MIT). Design date: 9 Nov 2026 (Europe/Berlin).*
+*Sources consulted for APM facts: microsoft/apm README; Governance deep-dive (incl. §§2, 4, 5, 8, 14); Policy files page; apm audit CLI reference; LICENSE (Apache-2.0), LICENSE-DOCS (CC-BY-4.0) and NOTICE (historical MIT). Design date: 9 Nov 2026 (Europe/Berlin).*

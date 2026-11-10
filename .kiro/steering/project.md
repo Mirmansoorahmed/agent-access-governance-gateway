@@ -4,7 +4,7 @@
 Portfolio project: extend Microsoft **APM** (Agent Package Manager) with a **runtime Access Governance Gateway**. One policy (`apm-policy.yml`) enforced at install/CI **and** on every live MCP tool call. Demo firm: **Northwind Advisory**.
 
 ## Upstream fork rules
-- This repo is a **fork of [microsoft/apm](https://github.com/microsoft/apm)** (MIT). Keep the Microsoft copyright + MIT notice in all substantial portions.
+- This repo is a **fork of [microsoft/apm](https://github.com/microsoft/apm)** — **Apache-2.0** for software, **CC-BY-4.0** for docs (historical MIT releases noted in `NOTICE`). Keep the Microsoft copyright and upstream license notices (incl. the historical MIT `NOTICE`) in all substantial portions.
 - **Do not rewrite or freely edit upstream APM code paths.** Prefer **minimal hooks** only where the runtime must read policy/lockfile.
 - Put **all our code** in isolated dirs, e.g.:
   - `gateway/` — MCP proxy / PEP
