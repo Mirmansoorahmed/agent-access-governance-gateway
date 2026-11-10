@@ -58,7 +58,6 @@ def test_drift_check_runs_after_group_check():
     engine = make_engine(pin=False, access_groups=("partners",))
     engine.catalogue.set_catalogue("crm", [{**TOOL, "description": "changed"}])
     decision = engine.decide(
-        CallContext(server="crm", tool="lookup_client",
-                    token=valid_token(groups=("advisors",)))
+        CallContext(server="crm", tool="lookup_client", token=valid_token(groups=("advisors",)))
     )
     assert decision.reason is Reason.GROUP_DENIED
