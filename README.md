@@ -106,16 +106,16 @@ make gateway-test
 
 ## Results
 
-| Metric | Value |
-|---|---|
-| Block rate (attack suite) | *planned — to be measured* |
-| Benign false-block rate (golden path) | *planned — to be measured* |
-| Gateway overhead p50 / p95 (allow path) | *planned — to be measured* |
+Numbers are published **only** from the committed, OPA-backed eval run
+(`eval/results/latest-opa.json`, stamped with timestamp + git SHA) — never
+hand-entered. The table below is rendered from that file by
+`python scripts/render_results_table.py`; run `make eval-opa` to produce the
+file, then `make results-table` to refresh this section.
 
-Numbers are published **only** from a committed eval-harness run
-(`eval/results/*.json`, stamped with timestamp + git SHA) — never hand-entered.
-Run `make eval-opa` to produce the authoritative file, then fill this table from
-it.
+<!-- RESULTS:BEGIN -->
+*No committed `eval/results/latest-opa.json` yet — run `make eval-opa` then
+`make results-table`. Until then: planned / to be measured.*
+<!-- RESULTS:END -->
 
 ## Limitations
 

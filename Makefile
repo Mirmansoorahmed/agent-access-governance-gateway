@@ -79,3 +79,11 @@ demo:
 		--pins .gateway/pins.json \
 		--lockfile apm.lock.yaml
 	@echo "Demo evidence in .gateway/ ; reports in reports/out/ (run 'make reports' for PDFs)."
+
+.PHONY: results-table
+
+# Refresh the README Results table from the committed OPA-backed eval results.
+# Numbers come only from eval/results/latest-opa.json (produced by `make
+# eval-opa`); this never writes figures by hand.
+results-table:
+	python scripts/render_results_table.py --write

@@ -95,4 +95,7 @@ copilot-scratch/
 # Access Governance Gateway (fork) -- generated runtime evidence + rendered reports
 .gateway/
 reports/out/
-eval/results/*.json
+# Local reference-PDP eval output is transient; the authoritative OPA-backed
+# results file (eval/results/latest-opa.json) IS committed and is the only
+# source for README numbers.
+eval/results/latest.json
