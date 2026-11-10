@@ -12,7 +12,6 @@ from gateway.identity import (
     HmacTokenVerifier,
     StaticVerifier,
     build_entra_verifier,
-    build_keycloak_rs256_verifier,
 )
 
 SECRET = b"unit-secret"
@@ -136,8 +135,26 @@ def test_claims_summary_has_no_raw_token():
     }
 
 
-def test_rs256_and_entra_factories_are_stubs():
-    with pytest.raises(NotImplementedError):
-        build_keycloak_rs256_verifier()
+def test_audience_accepts_string():
+    v = _verifier(audience="gateway")
+    token = v.mint({"sub": "u1", "groups": [], "aud": "gateway"})
+    assert v.verify(token).subject == "u1"
+
+
+def test_audience_accepts_array_containing_expected():
+    v = _verifier(audience="gateway")
+    token = v.mint({"sub": "u1", "groups": [], "aud": ["other", "gateway"]})
+    assert v.verify(token).subject == "u1"
+
+
+def test_audience_array_without_expected_is_invalid():
+    v = _verifier(audience="gateway")
+    token = v.mint({"sub": "u1", "groups": [], "aud": ["a", "b"]})
+    with pytest.raises(GatewayDenied) as exc:
+        v.verify(token)
+    assert exc.value.reason is Reason.IDENTITY_INVALID
+
+
+def test_entra_factory_is_stub():
     with pytest.raises(NotImplementedError):
         build_entra_verifier()

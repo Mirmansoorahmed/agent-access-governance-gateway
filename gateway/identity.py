@@ -60,6 +60,33 @@ class TokenVerifier(Protocol):
     def verify(self, token: str) -> Claims: ...
 
 
+def _audience_ok(claim, expected: str) -> bool:
+    """RFC 7519: ``aud`` may be a single string or an array of strings."""
+    if isinstance(claim, str):
+        return claim == expected
+    if isinstance(claim, (list, tuple)):
+        return expected in claim
+    return False
+
+
+def _validate_standard_claims(
+    payload: dict,
+    *,
+    issuer: str | None,
+    audience: str | None,
+    leeway_seconds: int,
+) -> None:
+    """Validate ``exp`` / ``iss`` / ``aud`` or raise ``identity-invalid``."""
+    now = int(time.time())
+    exp = payload.get("exp")
+    if exp is not None and now > int(exp) + leeway_seconds:
+        raise GatewayDenied(Reason.IDENTITY_INVALID, "token expired")
+    if issuer is not None and payload.get("iss") != issuer:
+        raise GatewayDenied(Reason.IDENTITY_INVALID, "issuer mismatch")
+    if audience is not None and not _audience_ok(payload.get("aud"), audience):
+        raise GatewayDenied(Reason.IDENTITY_INVALID, "audience mismatch")
+
+
 def _claims_from_payload(payload: dict) -> Claims:
     """Extract the gateway's claim set from a decoded JWT payload."""
     subject = payload.get("sub")
@@ -120,15 +147,12 @@ class HmacTokenVerifier:
         if not hmac.compare_digest(expected, provided):
             raise GatewayDenied(Reason.IDENTITY_INVALID, "bad signature")
 
-        now = int(time.time())
-        exp = payload.get("exp")
-        if exp is not None and now > int(exp) + self.leeway_seconds:
-            raise GatewayDenied(Reason.IDENTITY_INVALID, "token expired")
-        if self.issuer is not None and payload.get("iss") != self.issuer:
-            raise GatewayDenied(Reason.IDENTITY_INVALID, "issuer mismatch")
-        if self.audience is not None and payload.get("aud") != self.audience:
-            raise GatewayDenied(Reason.IDENTITY_INVALID, "audience mismatch")
-
+        _validate_standard_claims(
+            payload,
+            issuer=self.issuer,
+            audience=self.audience,
+            leeway_seconds=self.leeway_seconds,
+        )
         return _claims_from_payload(payload)
 
     def mint(self, payload: dict) -> str:
@@ -154,17 +178,106 @@ class StaticVerifier:
         return claims
 
 
-def build_keycloak_rs256_verifier(*_args, **_kwargs):  # pragma: no cover - needs network/jwt
-    """Factory for the real RS256 + JWKS verifier (CI / lab only).
+def _load_jwks(source: str) -> dict:
+    """Load a JWKS document from a local file path or an http(s) URL.
 
-    Intentionally unimplemented in the offline core: it requires a JWT library
-    and a reachable JWKS endpoint. Wired where network is available.
+    Keycloak exposes the realm JWKS at the OIDC ``jwks_uri``. For the lab/tests
+    the same document can be a committed file, so verification needs no network.
     """
-    raise NotImplementedError(
-        "RS256/JWKS verification is wired in CI/lab; use HmacTokenVerifier offline"
+    if source.startswith(("http://", "https://")):
+        import urllib.request  # local import keeps module import dependency-free
+
+        with urllib.request.urlopen(source) as response:  # noqa: S310 - config-provided
+            return json.loads(response.read().decode("utf-8"))
+    with open(source, encoding="utf-8") as handle:
+        return json.loads(handle.read())
+
+
+@dataclass
+class RS256JWKSVerifier:
+    """Verify RS256 JWTs against a JWKS (Keycloak's default algorithm).
+
+    ``jwks`` is either a JWKS mapping (``{"keys": [...]}``) or a file path / URL
+    string resolved via :func:`_load_jwks`. Keys are matched by ``kid`` when the
+    token header carries one, else the first RSA key is tried. Verification uses
+    the pure-stdlib :func:`gateway.rsa_jwt.verify_rs256`, so it runs offline.
+    """
+
+    jwks: dict | str
+    issuer: str | None = None
+    audience: str | None = None
+    leeway_seconds: int = 0
+
+    def _keys(self) -> list[dict]:
+        document = self.jwks if isinstance(self.jwks, dict) else _load_jwks(self.jwks)
+        return [k for k in document.get("keys", []) if k.get("kty") == "RSA"]
+
+    def _select_key(self, kid: str | None) -> dict:
+        keys = self._keys()
+        if not keys:
+            raise GatewayDenied(Reason.IDENTITY_INVALID, "no RSA keys in JWKS")
+        if kid is not None:
+            for key in keys:
+                if key.get("kid") == kid:
+                    return key
+            raise GatewayDenied(Reason.IDENTITY_INVALID, "no JWKS key for kid")
+        return keys[0]
+
+    def verify(self, token: str) -> Claims:
+        from .rsa_jwt import b64url_to_int, verify_rs256
+
+        try:
+            header_b64, payload_b64, signature_b64 = token.split(".")
+        except ValueError as exc:
+            raise GatewayDenied(Reason.IDENTITY_INVALID, "malformed token") from exc
+
+        try:
+            header = json.loads(_b64url_decode(header_b64))
+            payload = json.loads(_b64url_decode(payload_b64))
+            signature = _b64url_decode(signature_b64)
+        except (ValueError, json.JSONDecodeError) as exc:
+            raise GatewayDenied(Reason.IDENTITY_INVALID, "undecodable token") from exc
+
+        if header.get("alg") != "RS256":
+            raise GatewayDenied(Reason.IDENTITY_INVALID, "unexpected token alg")
+
+        key = self._select_key(header.get("kid"))
+        n = b64url_to_int(key["n"])
+        e = b64url_to_int(key["e"])
+        signing_input = f"{header_b64}.{payload_b64}".encode("ascii")
+        if not verify_rs256(signing_input, signature, n, e):
+            raise GatewayDenied(Reason.IDENTITY_INVALID, "bad signature")
+
+        _validate_standard_claims(
+            payload,
+            issuer=self.issuer,
+            audience=self.audience,
+            leeway_seconds=self.leeway_seconds,
+        )
+        return _claims_from_payload(payload)
+
+
+def build_keycloak_rs256_verifier(
+    jwks: dict | str,
+    issuer: str | None = None,
+    audience: str | None = None,
+    leeway_seconds: int = 0,
+) -> RS256JWKSVerifier:
+    """Build the Keycloak RS256/JWKS verifier.
+
+    ``jwks`` is a JWKS mapping or a file path / URL (e.g. the realm ``jwks_uri``).
+    """
+    return RS256JWKSVerifier(
+        jwks=jwks, issuer=issuer, audience=audience, leeway_seconds=leeway_seconds
     )
 
 
 def build_entra_verifier(*_args, **_kwargs):  # pragma: no cover - optional adapter stub
-    """Optional Microsoft Entra adapter stub -- never required to run the lab."""
+    """Optional Microsoft Entra adapter stub -- never required to run the lab.
+
+    Entra also issues RS256 JWTs over a JWKS, so a real adapter would delegate to
+    :class:`RS256JWKSVerifier` with the tenant's ``jwks_uri`` and issuer. Left as
+    an explicit stub because the default lab uses Keycloak and must not require a
+    cloud IdP.
+    """
     raise NotImplementedError("Entra adapter is an optional stub; default lab uses Keycloak")

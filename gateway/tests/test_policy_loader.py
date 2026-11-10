@@ -12,8 +12,11 @@ import pytest
 from gateway.errors import GatewayDenied, Reason
 from gateway.policy_loader import (
     EffectivePolicy,
+    LockfilePin,
     McpAllowlist,
+    MissingLockfileError,
     load_effective_policy,
+    lockfile_pins_from_data,
     matches_pattern,
 )
 
@@ -108,6 +111,70 @@ def test_ok_backend_returns_policy():
     policy = load_effective_policy(_OkBackend())
     assert isinstance(policy, EffectivePolicy)
     assert policy.mcp.allow == ("srv/*",)
+
+
+# --- missing lockfile fails closed (R2.3) -------------------------------
+class _MissingLockfileBackend:
+    def load(self):
+        raise MissingLockfileError("apm.lock.yaml not found at ./apm.lock.yaml")
+
+
+def test_missing_lockfile_is_policy_load_failed():
+    with pytest.raises(GatewayDenied) as excinfo:
+        load_effective_policy(_MissingLockfileBackend())
+    assert excinfo.value.reason is Reason.POLICY_LOAD_FAILED
+    assert "apm.lock.yaml" in excinfo.value.detail
+
+
+def test_lockfile_pins_from_data_parses_entries():
+    data = {
+        "dependencies": [
+            {"name": "a", "version": "1.0.0", "content_hash": "sha256:aa"},
+            {"name": "b"},
+        ]
+    }
+    pins = lockfile_pins_from_data(data)
+    assert pins[0] == LockfilePin(name="a", version="1.0.0", content_hash="sha256:aa")
+    assert pins[1] == LockfilePin(name="b", version="", content_hash="")
+
+
+def test_lockfile_pins_from_empty_is_empty():
+    assert lockfile_pins_from_data(None) == ()
+    assert lockfile_pins_from_data({}) == ()
+
+
+# --- Check 1 matcher prefers upstream, falls back offline ----------------
+def test_matcher_resolver_falls_back_offline():
+    """Offline (no apm_cli), the resolver returns a working fallback matcher."""
+    from gateway import policy_loader
+
+    matcher = policy_loader._resolve_first_matcher()
+    assert matcher("srv/read", ("srv/*",)) == "srv/*"
+    assert matcher("srv/read", ("other/*",)) is None
+
+
+def test_matcher_resolver_prefers_upstream_when_importable(monkeypatch):
+    """When apm_cli.policy.matcher imports, the resolver returns its function."""
+    import sys
+    import types
+
+    sentinel = types.ModuleType("apm_cli.policy.matcher")
+    calls = {}
+
+    def _fake_first_matching_pattern(value, patterns):
+        calls["used"] = True
+        return patterns[0] if patterns else None
+
+    sentinel.first_matching_pattern = _fake_first_matching_pattern
+    monkeypatch.setitem(sys.modules, "apm_cli", types.ModuleType("apm_cli"))
+    monkeypatch.setitem(sys.modules, "apm_cli.policy", types.ModuleType("apm_cli.policy"))
+    monkeypatch.setitem(sys.modules, "apm_cli.policy.matcher", sentinel)
+
+    from gateway import policy_loader
+
+    resolved = policy_loader._resolve_first_matcher()
+    assert resolved("x", ("p",)) == "p"
+    assert calls.get("used") is True
 
 
 # --- contract: fallback glob agrees with upstream matcher ----------------

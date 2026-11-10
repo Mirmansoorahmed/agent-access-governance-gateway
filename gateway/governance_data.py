@@ -1,8 +1,11 @@
 """Load the shared governance data document for LocalPdp (offline-safe).
 
 OPA reads ``policy/opa/tiers.yml`` natively. The offline gateway/tests need the
-same data without a YAML dependency, so we keep a committed JSON mirror
-``policy/opa/tiers.json`` that is generated from the YAML by
+same data without a YAML dependency, so we keep a committed JSON mirror at
+``gateway/data/tiers.json`` -- deliberately OUTSIDE ``policy/opa/`` so that
+``opa test policy/opa`` and ``opa eval --data policy/opa`` do not load both the
+YAML and the JSON (which would raise a data merge conflict at
+``data.governance``). The mirror is generated from the YAML by
 ``scripts/sync_opa_data.py`` (``make opa-data``) and checked in CI. This loader
 prefers YAML when ``pyyaml`` is importable (CI / lab) and falls back to the JSON
 mirror offline -- a sync test asserts the two agree.
@@ -15,7 +18,7 @@ from pathlib import Path
 
 _ROOT = Path(__file__).resolve().parent.parent
 YAML_PATH = _ROOT / "policy" / "opa" / "tiers.yml"
-JSON_PATH = _ROOT / "policy" / "opa" / "tiers.json"
+JSON_PATH = _ROOT / "gateway" / "data" / "tiers.json"
 
 
 def load_governance_document() -> dict:

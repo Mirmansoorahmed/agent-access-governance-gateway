@@ -2,7 +2,9 @@
 """Generate/check the JSON mirror of policy/opa/tiers.yml.
 
 OPA reads the YAML natively; the offline gateway reads the JSON mirror so it
-needs no YAML dependency. Keep them in lockstep:
+needs no YAML dependency. The mirror lives at gateway/data/tiers.json (outside
+policy/opa/ so OPA never loads both and hits a data merge conflict). Keep them
+in lockstep:
 
     python scripts/sync_opa_data.py          # regenerate tiers.json from YAML
     python scripts/sync_opa_data.py --check  # fail if the mirror is stale
@@ -19,7 +21,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 YAML_PATH = ROOT / "policy" / "opa" / "tiers.yml"
-JSON_PATH = ROOT / "policy" / "opa" / "tiers.json"
+JSON_PATH = ROOT / "gateway" / "data" / "tiers.json"
 
 
 def _render() -> str:

@@ -15,9 +15,10 @@ requires_opa = pytest.mark.skipif(
     reason="requires the 'opa' binary on PATH (maintainer/CI only)",
 )
 
-# Paths for the real OPA adapter in parity tests.
+# Path to the OPA bundle for parity tests. The bundle dir (policy/opa) already
+# contains both access.rego and tiers.yml, so SubprocessOpaPdp loads it with a
+# single --data and never double-loads the data document.
 from pathlib import Path  # noqa: E402
 
 _ROOT = Path(__file__).resolve().parent.parent.parent
 OPA_BUNDLE_DIR = str(_ROOT / "policy" / "opa")
-OPA_DATA_FILE = str(_ROOT / "policy" / "opa" / "tiers.yml")

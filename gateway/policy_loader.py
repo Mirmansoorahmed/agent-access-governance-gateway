@@ -98,7 +98,7 @@ def _compile(pattern: str) -> re.Pattern:
 
 
 def matches_pattern(value: str, pattern: str) -> bool:
-    """Match *value* against a single policy glob *pattern*."""
+    """Match *value* against a single policy glob *pattern* (fallback impl)."""
     if not pattern or not value:
         return False
     if value == pattern:
@@ -106,11 +106,62 @@ def matches_pattern(value: str, pattern: str) -> bool:
     return bool(_compile(pattern).match(value))
 
 
+def _resolve_first_matcher():
+    """Return ``first_matching_pattern`` from upstream when importable.
+
+    Check 1 must reuse upstream ``apm_cli.policy.matcher`` glob semantics (the
+    case-sensitive MCP path) so install-time and runtime agree. The result is
+    cached; the dependency-free local fallback is used only when ``apm_cli``
+    (or its dependencies) cannot be imported -- e.g. the offline sandbox.
+    """
+    try:
+        from apm_cli.policy.matcher import first_matching_pattern
+
+        return first_matching_pattern
+    except Exception:  # fall back to the local glob implementation
+
+        def _fallback(value: str, patterns: tuple[str, ...] | None) -> str | None:
+            for pattern in patterns or ():
+                if matches_pattern(value, pattern):
+                    return pattern
+            return None
+
+        return _fallback
+
+
+@lru_cache(maxsize=1)
+def _first_matcher():
+    return _resolve_first_matcher()
+
+
 def _first_match(value: str, patterns: tuple[str, ...] | None) -> str | None:
-    for pattern in patterns or ():
-        if matches_pattern(value, pattern):
-            return pattern
-    return None
+    return _first_matcher()(value, patterns)
+
+
+# --------------------------------------------------------------------------
+# Lockfile parsing (pure, dependency-free -- unit-testable offline)
+# --------------------------------------------------------------------------
+class MissingLockfileError(FileNotFoundError):
+    """Raised when ``apm.lock.yaml`` is absent.
+
+    The gateway must fail **closed** (R2.3): without a lockfile the runtime has
+    no pins to anchor to, so loading denies rather than silently continuing.
+    """
+
+
+def lockfile_pins_from_data(data: dict | None) -> tuple[LockfilePin, ...]:
+    """Extract :class:`LockfilePin`s from an already-parsed lockfile mapping."""
+    data = data or {}
+    pins = []
+    for dep in data.get("dependencies", []) or []:
+        pins.append(
+            LockfilePin(
+                name=dep.get("name", ""),
+                version=str(dep.get("version", "")),
+                content_hash=dep.get("content_hash", ""),
+            )
+        )
+    return tuple(pins)
 
 
 # --------------------------------------------------------------------------
@@ -150,19 +201,11 @@ class ApmCliPolicyBackend:
 
         path = os.path.join(self.project_dir, "apm.lock.yaml")
         if not os.path.exists(path):
-            return ()
+            # Fail closed: a missing lockfile must deny, not continue (R2.3).
+            raise MissingLockfileError(f"apm.lock.yaml not found at {path}")
         with open(path, encoding="utf-8") as handle:
             data = yaml.safe_load(handle) or {}
-        pins = []
-        for dep in data.get("dependencies", []) or []:
-            pins.append(
-                LockfilePin(
-                    name=dep.get("name", ""),
-                    version=str(dep.get("version", "")),
-                    content_hash=dep.get("content_hash", ""),
-                )
-            )
-        return tuple(pins)
+        return lockfile_pins_from_data(data)
 
 
 def load_effective_policy(backend) -> EffectivePolicy:

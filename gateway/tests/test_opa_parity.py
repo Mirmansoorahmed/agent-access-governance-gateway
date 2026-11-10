@@ -13,7 +13,7 @@ import pytest
 
 from gateway.governance_data import load_governance
 from gateway.opa_client import LocalPdp, OpaInput, SubprocessOpaPdp
-from gateway.tests.opa_support import OPA_BUNDLE_DIR, OPA_DATA_FILE, requires_opa
+from gateway.tests.opa_support import OPA_BUNDLE_DIR, requires_opa
 
 # Cases spanning allow/deny and every tier present in the data document.
 CASES = [
@@ -45,7 +45,10 @@ def test_local_pdp_decisions_from_data_mirror():
 @requires_opa
 @pytest.mark.parametrize("case", CASES)
 def test_opa_matches_local_pdp(case):
-    opa = SubprocessOpaPdp(bundle_dir=OPA_BUNDLE_DIR, data_files=(OPA_DATA_FILE,))
+    # Bundle dir already contains both access.rego and tiers.yml, so we do NOT
+    # pass the YAML again as a second --data (that would re-merge the same keys
+    # and raise a data merge conflict at data.governance).
+    opa = SubprocessOpaPdp(bundle_dir=OPA_BUNDLE_DIR)
     local = _local()
     opa_decision = opa.evaluate(case)
     local_decision = local.evaluate(case)
@@ -64,5 +67,5 @@ def test_json_mirror_in_sync_when_yaml_available():
     with open(root / "policy" / "opa" / "tiers.yml", encoding="utf-8") as handle:
         data = yaml.safe_load(handle) or {}
     expected = json.dumps(data, indent=2, sort_keys=True) + "\n"
-    actual = (root / "policy" / "opa" / "tiers.json").read_text(encoding="utf-8")
+    actual = (root / "gateway" / "data" / "tiers.json").read_text(encoding="utf-8")
     assert actual == expected
