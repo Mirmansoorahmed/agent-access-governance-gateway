@@ -1,0 +1,46 @@
+# Runtime access + approval-tier data document (Northwind Advisory, synthetic).
+#
+# Loaded into OPA as `data.governance` (opa eval --data policy/opa/tiers.yml) and
+# into gateway.opa_client.LocalPdp via LocalPdp.from_data(doc["governance"]).
+# Single source of truth for Check 2 (access) and Check 4 (tier), per the
+# approved decision to keep tiers in a data file rather than hard-coded in Rego.
+#
+# Tiers: allow | ask | deny | four-eyes | break-glass
+governance:
+  default_tier: deny
+
+  # Which OIDC groups may call which (server, tool).
+  access:
+    - server: crm
+      tool: lookup_client
+      groups: [advisors, partners]
+    - server: crm
+      tool: export_clients
+      groups: [partners]
+    - server: billing
+      tool: read_invoice
+      groups: [advisors, partners, finance]
+    - server: billing
+      tool: issue_refund
+      groups: [finance]
+    - server: research
+      tool: web_search
+      groups: [advisors, partners, analysts]
+
+  # Approval tier per (server, tool). Unlisted tools fall back to default_tier.
+  tiers:
+    - server: crm
+      tool: lookup_client
+      tier: allow
+    - server: crm
+      tool: export_clients
+      tier: four-eyes
+    - server: billing
+      tool: read_invoice
+      tier: allow
+    - server: billing
+      tool: issue_refund
+      tier: break-glass
+    - server: research
+      tool: web_search
+      tier: ask

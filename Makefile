@@ -21,3 +21,18 @@ notice-check:
 # without network or extra dependencies.
 gateway-test:
 	PYTHONPATH=. python -m pytest -c pytest-gateway.ini
+
+.PHONY: opa-data opa-data-check opa-test
+
+# Regenerate the JSON mirror of policy/opa/tiers.yml (offline gateway reads it).
+opa-data:
+	python scripts/sync_opa_data.py
+
+# CI check: fail if the JSON mirror is stale.
+opa-data-check:
+	python scripts/sync_opa_data.py --check
+
+# Run the Rego unit tests. Requires the `opa` binary (OPA 1.22.3 on the
+# maintainer machine; CI installs the static binary).
+opa-test:
+	opa test policy/opa -v
