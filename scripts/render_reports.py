@@ -97,11 +97,18 @@ def _policy_version(explicit: str, policy_path: str) -> str:
     p = Path(policy_path)
     if not p.exists():
         return ""
+    text = p.read_text(encoding="utf-8")
     try:
         import yaml
 
-        data = yaml.safe_load(p.read_text(encoding="utf-8")) or {}
+        data = yaml.safe_load(text) or {}
         return str(data.get("version", ""))
+    except ImportError:
+        # Offline fallback: read the top-level `version:` scalar directly.
+        import re
+
+        match = re.search(r"^version:\s*['\"]?([^'\"\n]+)['\"]?\s*$", text, re.MULTILINE)
+        return match.group(1).strip() if match else ""
     except Exception:
         return ""
 

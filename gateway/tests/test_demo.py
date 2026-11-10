@@ -51,3 +51,35 @@ def test_demo_evidence_feeds_reports(tmp_path):
     md = blocked_activity_md(ReportInputs(spans=spans, generated_at="t", git_sha="s"))
     # Two blocked calls (drift + wrong group) show up in the report.
     assert "Total blocked calls: 2" in md
+
+
+def test_sample_policy_exists_with_version():
+    from pathlib import Path
+
+    policy = Path(__file__).resolve().parent.parent.parent / "apm-policy.yml"
+    assert policy.exists(), "sample apm-policy.yml for the demo is missing"
+    text = policy.read_text(encoding="utf-8")
+    assert "version:" in text
+    assert "mcp:" in text and "allow:" in text
+
+
+def test_demo_onboarding_amends_committed_sample_policy(tmp_path):
+    run_demo(out_dir=str(tmp_path))
+    amended = (tmp_path / "onboarding-policy.yml").read_text(encoding="utf-8")
+    # The amendment is applied on top of the committed sample policy.
+    assert "northwind-advisory" in amended
+    assert "research/*" in amended
+
+
+def test_demo_runs_with_real_opa_when_available(tmp_path):
+    from gateway.opa_client import opa_available
+
+    if not opa_available():
+        import pytest
+
+        pytest.skip("requires the 'opa' binary on PATH (maintainer/CI only)")
+    log = run_demo(out_dir=str(tmp_path), use_opa=True)
+    assert any("real OPA" in line for line in log)
+    spans = load_spans(str(tmp_path / "spans.jsonl"))
+    reasons = [s["attributes"]["decision.reason"] for s in spans]
+    assert "allow" in reasons and "group-denied" in reasons

@@ -44,7 +44,16 @@ _SEARCH = {
     "inputSchema": {"type": "object", "properties": {"q": {"type": "string"}}},
 }
 
-_DEMO_POLICY = "name: northwind-advisory\nmcp:\n  allow:\n    - crm/*\n"
+
+def _demo_policy_text() -> str:
+    """The committed sample org policy the onboarding stage amends.
+
+    Falls back to a minimal inline policy if the sample is absent.
+    """
+    sample = Path(__file__).resolve().parent.parent / "apm-policy.yml"
+    if sample.exists():
+        return sample.read_text(encoding="utf-8")
+    return "name: northwind-advisory\nversion: '1.0.0'\nmcp:\n  allow:\n    - crm/*\n"
 
 
 def _token(groups, role="advisor", department="advisory", seniority="senior", sub="consultant1"):
@@ -59,8 +68,23 @@ def _token(groups, role="advisor", department="advisory", seniority="senior", su
     )
 
 
-def run_demo(out_dir: str = ".gateway") -> list[str]:
-    """Run the five-stage demo, write evidence, return a human-readable log."""
+def _make_pdp(use_opa: bool):
+    """Return the PDP: real OPA when requested, else the LocalPdp reference."""
+    if use_opa:
+        from gateway.opa_client import SubprocessOpaPdp, opa_available
+
+        if not opa_available():
+            raise RuntimeError("--opa requested but no 'opa' binary on PATH")
+        return SubprocessOpaPdp(bundle_dir="policy/opa")
+    return LocalPdp.from_data(load_governance())
+
+
+def run_demo(out_dir: str = ".gateway", use_opa: bool = False) -> list[str]:
+    """Run the five-stage demo, write evidence, return a human-readable log.
+
+    ``use_opa=True`` drives Check 2 / tier via the real ``opa`` binary against
+    policy/opa (same decisions as the offline LocalPdp, parity-tested).
+    """
     out = Path(out_dir)
     out.mkdir(parents=True, exist_ok=True)
     spans_path = out / "spans.jsonl"
@@ -78,7 +102,8 @@ def run_demo(out_dir: str = ".gateway") -> list[str]:
     pin_store = PinStore(path=str(pins_path))
     pin_store.set_pin("crm", "lookup_client", pin_for_tool(_LOOKUP), approved_by="security")
 
-    pdp = LocalPdp.from_data(load_governance())
+    pdp = _make_pdp(use_opa)
+    log.append(f"PDP: {'real OPA' if use_opa else 'LocalPdp (reference)'}.")
     engine = DecisionEngine(
         policy=EffectivePolicy(mcp=McpAllowlist(allow=("crm/*",))),
         verifier=HmacTokenVerifier(secret=_SECRET),
@@ -105,7 +130,7 @@ def run_demo(out_dir: str = ".gateway") -> list[str]:
         requested_by="consultant1",
     )
     result = run_onboarding(
-        req, _DEMO_POLICY, attack_smoke=lambda _r: True, approvers=("alice", "bob")
+        req, _demo_policy_text(), attack_smoke=lambda _r: True, approvers=("alice", "bob")
     )
     log.append(
         f"Stage 2: onboarding approved={result.approved} by {result.approvers}; "
@@ -182,6 +207,17 @@ def run_demo(out_dir: str = ".gateway") -> list[str]:
     return log
 
 
-if __name__ == "__main__":  # pragma: no cover
-    for line in run_demo():
+def main(argv: list[str] | None = None) -> int:  # pragma: no cover - thin CLI
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Run the Northwind demo scenario.")
+    parser.add_argument("--out", default=".gateway")
+    parser.add_argument("--opa", action="store_true", help="Drive Check 2/tier via real OPA.")
+    args = parser.parse_args(argv)
+    for line in run_demo(out_dir=args.out, use_opa=args.opa):
         print(line)
+    return 0
+
+
+if __name__ == "__main__":  # pragma: no cover
+    raise SystemExit(main())
