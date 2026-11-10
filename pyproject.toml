@@ -141,6 +141,9 @@ known-first-party = ["apm_cli"]
 "scripts/sync_opa_data.py" = ["S101"]
 # render_reports shells out to `git` for provenance, like upstream scripts.
 "scripts/render_reports.py" = ["S603", "S607"]
+# The eval runner shells out to `git` (provenance) and `opa` (real PDP run).
+"eval/runner.py" = ["S603", "S607"]
+"eval/__main__.py" = ["S603", "S607"]
 # Files using `from __future__ import annotations` with forward-reference-only
 # type imports (PEP 563). Ruff cannot resolve these without a type checker.
 "src/apm_cli/policy/ci_checks.py" = ["F821", "S603", "S607"]

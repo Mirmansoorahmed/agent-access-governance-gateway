@@ -52,3 +52,15 @@ reports:
 		--pins .gateway/pins.json \
 		--lockfile apm.lock.yaml \
 		--pdf
+
+.PHONY: eval eval-opa
+
+# Run the eval harness with the offline/reference PDP (LocalPdp) and persist
+# results (timestamp + git SHA). Fails if any case outcome is unexpected.
+eval:
+	python -m eval --out eval/results/latest.json
+
+# Authoritative, OPA-backed run (requires the `opa` binary; OPA 1.22.3).
+# The numbers in this file are the ones that may be cited.
+eval-opa:
+	python -m eval --out eval/results/latest-opa.json --opa
