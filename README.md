@@ -1,200 +1,116 @@
-# APM – Agent Package Manager
+# Agent Access Governance Gateway
 
-**An open-source, community-driven dependency manager for AI agents.**
+A fork of [microsoft/apm](https://github.com/microsoft/apm) that adds a **runtime
+Access Governance Gateway** on top of APM's install-time governance. **One policy,
+two enforcement points:** the same `apm-policy.yml` + `apm.lock.yaml` that gate
+`apm install` / `apm audit --ci` are re-read by a runtime Policy Enforcement
+Point that decides **every MCP `tools/call`**.
 
-Think `package.json`, `requirements.txt`, or `Cargo.toml` — but for AI agent configuration.
+> Portfolio / lab project. Synthetic data only; fictional firm **Northwind
+> Advisory**. Built on and crediting [microsoft/apm](https://github.com/microsoft/apm)
+> (**Apache-2.0** software · **CC-BY-4.0** docs; historical MIT in [`NOTICE`](NOTICE)).
+> The upstream APM README is preserved at
+> [`docs/UPSTREAM-README.md`](docs/UPSTREAM-README.md). Full design:
+> [`docs/DESIGN.md`](docs/DESIGN.md).
 
-GitHub Copilot | Claude Code | Grok Build | Cursor | OpenCode | Codex | Gemini | Windsurf | Kiro
+## Problem
 
-**[Documentation](https://microsoft.github.io/apm/)** · **[Quick Start](https://microsoft.github.io/apm/quickstart/)** · **[CLI Reference](https://microsoft.github.io/apm/reference/)** · **[Roadmap](https://github.com/orgs/microsoft/projects/2304/views/5)**
+APM governs *what gets installed*; it is explicitly **not a runtime sandbox** and
+has no schema for the calling agent's identity. So after a tool is approved and
+installed, nothing checks *who* calls it, whether its description changed, or
+whether a sensitive call needs a human. This fork adds that runtime layer without
+touching upstream APM code (`src/apm_cli/**` is imported read-only).
 
----
+## APM (upstream) vs this fork
 
-> **Portable by manifest. Secure by default. Governed by policy.**
-> One file describes every agent's context; one command reproduces it everywhere; one policy controls what an org will allow.
+| Capability | APM (upstream) | This fork |
+|---|---|---|
+| Install-time dependency/MCP allowlist (`apm-policy.yml`) | ✅ | ✅ (unchanged, reused) |
+| CI gate (`apm audit --ci`) | ✅ | ✅ (run in fork CI) |
+| **Runtime per-call enforcement** of `tools/call` | ❌ (not a runtime sandbox) | ✅ Policy Enforcement Point |
+| **OIDC group checks** (role / department / seniority) | ❌ (no identity in schema) | ✅ via OPA (Keycloak default) |
+| **Live tool-description drift** detection | ❌ (install-time file hashes only) | ✅ SHA-256 pin per approved tool |
+| **Approval tiers** `allow`/`ask`/`deny` | ❌ | ✅ |
+| **Four-eyes** (two distinct approvers) | ❌ | ✅ sequential or one-shot |
+| **Break-glass** (justified emergency) | ❌ | ✅ flagged high-severity |
+| **Evidence** per decision | lockfile + SARIF | ✅ OpenTelemetry span (args redacted) |
+| **Auditor reports** (MD + PDF) | ❌ | ✅ 5 reports, derived from evidence |
 
-## Why APM
+Check order on every call (all must pass to auto-allow; **fails closed** if
+policy, lockfile, or OPA can't be loaded):
 
-AI coding agents need context to be useful — standards, prompts, skills, plugins — but today every developer sets this up manually. Nothing is portable nor reproducible. There's no manifest for it.
-
-**APM fixes this.** Declare your project's agentic dependencies once in `apm.yml`, and every developer who clones your repo gets a fully configured agent setup in seconds — with transitive dependency resolution, just like npm or pip. It's also the first tool that lets you **author plugins** with a real dependency manager and export standard `plugin.json` packages.
-
-```yaml
-# apm.yml — ships with your project
-name: your-project
-version: 1.0.0
-targets:
-  - copilot # choose the harness(es) this project supports
-dependencies:
-  apm:
-    # Skills from any repository
-    - anthropics/skills/skills/frontend-design
-    # Plugins
-    - github/awesome-copilot/plugins/context-engineering
-    # Specific agent primitives from any repository
-    - github/awesome-copilot/agents/api-architect.agent.md
-    # A full APM package with instructions, skills, prompts, hooks...
-    - microsoft/apm-sample-package#v1.0.0
-  mcp:
-    # MCP servers -- installed into every selected target
-    - name: io.github.github/github-mcp-server
-      transport: http   # MCP transport name, not URL scheme -- connects over HTTPS
 ```
+  apm.yml ──install──▶ apm.lock.yaml ──apm audit --ci──▶ CI gate     (UPSTREAM, unchanged)
+  apm-policy.yml  ─────────────── same policy, read-only ───────────────┐
+                                                                        ▼
+  AI agent ──MCP tools/call──▶  GATEWAY (PEP)  ──▶ MCP server          (THIS FORK)
+                                 1 tool approved? (allowlist, deny wins)
+      OIDC (Keycloak) ────────▶  2 group allowed? (OPA: role/dept/seniority)
+                                 3 description unchanged? (SHA-256 pin)
+                                 4 approval tier? allow|ask|deny|four-eyes|break-glass
+                                        │                     │
+                                        ▼                     ▼
+                              OTel evidence log      approval CLI (grants)
+                                        │
+                                        ▼
+                       reports: inventory · access · blocked · approvals · audit summary (MD + PDF)
+```
+
+## How to run
 
 ```bash
-git clone <org/repo> && cd <repo>
-apm install    # every agent is configured
+# Offline demo (no Docker): run the 10-minute Northwind scenario, write evidence,
+# render Markdown reports. PDF needs the optional extra: pip install '.[reports]'.
+make demo
+
+# Reports (Markdown + PDF) from a demo/eval run's evidence
+make reports
+
+# Eval harness (measured metrics). Offline reference PDP:
+make eval
+# Authoritative, OPA-backed run (needs OPA 1.22.3):
+make eval-opa
+
+# Full lab: OPA + Keycloak + OTel collector + gateway
+docker compose -f demo/docker-compose.yml up
+
+# Tests (offline; OPA-backed tests skip cleanly without the opa binary)
+make gateway-test
 ```
 
-**Coming from `npx skills add`?** Drop-in:
+## Results
 
-```bash
-apm install vercel-labs/agent-skills                            # whole bundle, like npx skills add
-apm install vercel-labs/agent-skills --skill deploy-to-vercel   # one skill, persisted to apm.yml
-```
+| Metric | Value |
+|---|---|
+| Block rate (attack suite) | *planned — to be measured* |
+| Benign false-block rate (golden path) | *planned — to be measured* |
+| Gateway overhead p50 / p95 (allow path) | *planned — to be measured* |
 
-Same install gesture. You also get a [manifest, lockfile, and reproducibility](https://microsoft.github.io/apm/reference/package-types/#skill-collection-skillsnameskillmd).
+Numbers are published **only** from a committed eval-harness run
+(`eval/results/*.json`, stamped with timestamp + git SHA) — never hand-entered.
+Run `make eval-opa` to produce the authoritative file, then fill this table from
+it.
 
-**Zero-config Copilot:**
+## Limitations
 
-```bash
-apm compile -t copilot   # writes .github/copilot-instructions.md
-```
+- Lab/portfolio design: synthetic MCP servers and data; not a production product.
+- Does not classify *what code* an agent writes (separate compliance track).
+- Does not fix upstream APM preview semantics, `mcp.trust_transitive` wiring, or
+  signed install attestations.
+- Heuristic description lint is narrow; a clean description with malicious
+  server-side behaviour still needs runtime monitoring + human review.
+- Single gateway is a deliberate PEP and a single point of failure; HA is out of
+  scope for v1.
+- Keycloak is the default IdP; Entra is an optional adapter stub, not required.
+- The **Audit Summary** maps controls to ISO/IEC 42001 Annex A themes and EU AI
+  Act Art. 12 / 14 **illustratively** — not a conformity claim.
 
-One command, no configuration -- VS Code and GitHub Copilot read the file automatically. APM dogfoods this target on its own repository.
+## Credit & license
 
-## The three promises
-
-### 1. Portable by manifest
-
-One `apm.yml` describes every primitive your agents need — instructions, skills, prompts, agents, hooks, plugins, MCP servers — and `apm install` reproduces the exact same setup across every client on every machine. `apm.lock.yaml` pins the resolved tree the way `package-lock.json` does for npm.
-
-- **[One manifest for everything](https://microsoft.github.io/apm/reference/primitive-types/)** -- declared once, deployed across Copilot, Claude, Grok Build, Cursor, OpenCode, Codex, Gemini, Windsurf, Kiro
-- **[Install from anywhere](https://microsoft.github.io/apm/consumer/install-packages/)** — GitHub, GitLab, Bitbucket, Azure DevOps, GitHub Enterprise, Gitea, Gogs, any git host
-- **[Transitive dependencies](https://microsoft.github.io/apm/consumer/install-packages/#transitive-dependencies-and-the-lockfile)** — packages can depend on packages; APM resolves the full tree
-- **[Author plugins](https://microsoft.github.io/apm/producer/)** — build Copilot, Claude, and Cursor plugins with dependency management, then export standard `plugin.json`
-- **[Marketplaces](https://microsoft.github.io/apm/consumer/installing-from-marketplaces/)** — install plugins from curated registries in one command, deployed across all targets and locked
-- **[Pack & distribute](https://microsoft.github.io/apm/producer/pack-a-bundle/)** — `apm pack` bundles your configuration as a zipped package or a standalone plugin
-- **[CI/CD ready](https://github.com/microsoft/apm-action)** — GitHub Action for automated workflows
-
-### 2. Secure by default
-
-Agent context is executable in effect — a prompt is a program for an LLM. APM treats it that way. Every install scans for hidden Unicode that can hijack agent behavior; the lockfile pins integrity hashes; transitive MCP servers are gated by trust prompts.
-
-- **[Content security](https://microsoft.github.io/apm/enterprise/security/)** — `apm install` blocks compromised packages before agents read them; `apm audit` runs the same checks on demand
-- **[Lockfile integrity](https://microsoft.github.io/apm/reference/lockfile-spec/)** — `apm.lock` records resolved sources and content hashes for full provenance
-- **[SBOM export](https://microsoft.github.io/apm/reference/cli/lock/)** — `apm lock export --format cyclonedx|spdx` emits a standard inventory of what reached disk, straight from the lockfile — provenance for procurement, not a compliance attestation
-- **[Drift detection](https://microsoft.github.io/apm/enterprise/drift-detection/)** — `apm audit` rebuilds your agent context in scratch and diffs it against your working tree to catch hand-edits before they ship
-- **[MCP trust boundaries](https://microsoft.github.io/apm/consumer/install-mcp-servers/)** — transitive MCP servers require explicit consent
-
-### 3. Governed by policy
-
-`apm-policy.yml` lets a security team say *"these are the only sources, scopes, and primitives this org will allow"* and have every `apm install` enforce it — with tighten-only inheritance from enterprise to org to repo, a published bypass contract, and audit-mode CI gates.
-
-apm-policy.yml governs what gets installed; your agent harness governs what runs. The two planes do not overlap.
-
-- **[Governance Guide](https://microsoft.github.io/apm/enterprise/governance-guide/)** — the canonical enterprise reference: enforcement points, bypass contract, air-gapped story, failure semantics, rollout playbook
-- **[Policy reference](https://microsoft.github.io/apm/enterprise/policy-reference/)** — every check, every field, every default
-- **[Adoption playbook](https://microsoft.github.io/apm/enterprise/adoption-playbook/)** — staged rollout from warn to block across hundreds of repos
-- **[GitHub rulesets integration](https://microsoft.github.io/apm/integrations/github-rulesets/)** — wire `apm audit --ci` into branch protection
-
-## Get Started
-
-#### macOS with Homebrew
-
-```bash
-brew install apm
-```
-
-No custom tap is required. Homebrew manages installation and updates:
-use `brew upgrade apm`, not `apm self-update`.
-
-#### Linux / macOS without Homebrew
-
-```bash
-curl -sSL https://aka.ms/apm-unix | sh
-```
-
-#### Windows
-
-```powershell
-irm https://aka.ms/apm-windows | iex
-```
-
-Native release binaries are published for macOS, Linux, and Windows x86_64.
-For standalone installations, `apm self-update` reuses the matching platform installer.
-You do not need Homebrew to use APM.
-
-<details>
-<summary>Other install methods: pip, WinGet, and Scoop</summary>
-
-#### Linux / macOS
-
-```bash
-# pip (Python 3.10+)
-pip install apm-cli
-```
-
-#### Windows
-
-```powershell
-# WinGet
-winget install --id Microsoft.APM --exact --source winget
-```
-
-```powershell
-# Scoop
-scoop bucket add apm https://github.com/microsoft/scoop-apm
-scoop install apm
-# pip
-pip install apm-cli
-```
-
-</details>
-
-Already using the Microsoft Homebrew tap? See the
-[migration guide](https://microsoft.github.io/apm/getting-started/installation/#migrate-from-the-microsoft-tap).
-
-Then start adding packages:
-
-```bash
-apm install microsoft/apm-sample-package#v1.0.0
-```
-
-Or install from a marketplace:
-
-```bash
-apm marketplace add github/awesome-copilot
-apm install azure-cloud-development@awesome-copilot
-```
-
-Or add an MCP server (wired into Copilot, Claude, Cursor, Codex, OpenCode, Gemini, Windsurf, and Kiro):
-
-```bash
-apm install --mcp io.github.github/github-mcp-server --transport http   # connects over HTTPS
-```
-
-See the **[Getting Started guide](https://microsoft.github.io/apm/quickstart/)** for the full walkthrough.
-
-## Works with agentrc
-
-[agentrc](https://github.com/microsoft/agentrc) analyzes your codebase and generates tailored agent instructions — architecture, conventions, build commands — from real code, not templates.
-
-Use agentrc to author high-quality instructions, then package them with APM to share across your org. The `.instructions.md` format is shared by both tools — no conversion needed when moving instructions into APM packages.
-
-## Community
-
-Created by [@danielmeppiel](https://github.com/danielmeppiel). Maintained by [@danielmeppiel](https://github.com/danielmeppiel) and [@sergio-sisternes-epam](https://github.com/sergio-sisternes-epam).
-
-- [Roadmap](https://github.com/orgs/microsoft/projects/2304/views/5)
-- [Discussions](https://github.com/microsoft/apm/discussions)
-- [Contributing](CONTRIBUTING.md)
-- [AI Native Development guide](https://danielmeppiel.github.io/awesome-ai-native) — a practical learning path for AI-native development
-
----
-
-**Built on open standards:** [AGENTS.md](https://agents.md) · [Agent Skills](https://agentskills.io) · [MCP](https://modelcontextprotocol.io)
-
-## Trademarks
-
-This project may contain trademarks or logos for projects, products, or services. Authorized use of Microsoft trademarks or logos is subject to and must follow [Microsoft's Trademark & Brand Guidelines](https://www.microsoft.com/en-us/legal/intellectualproperty/trademarks/usage/general). Use of Microsoft trademarks or logos in modified versions of this project must not cause confusion or imply Microsoft sponsorship. Any use of third-party trademarks or logos are subject to those third-party's policies.
+Built on [microsoft/apm](https://github.com/microsoft/apm) — all upstream APM
+behaviour, docs, and the preserved [`docs/UPSTREAM-README.md`](docs/UPSTREAM-README.md)
+are Microsoft's work. This fork follows upstream licensing: **Apache-2.0** for
+software ([`LICENSE`](LICENSE)), **CC-BY-4.0** for general documentation
+([`LICENSE-DOCS`](LICENSE-DOCS)); previously published MIT releases remain under
+their original terms, retained in [`NOTICE`](NOTICE). Upstream copyright and
+notices are preserved in all substantial portions.

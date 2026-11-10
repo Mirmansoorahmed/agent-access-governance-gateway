@@ -6,22 +6,35 @@ import re
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent.parent
-README = ROOT / "README-governance.md"
+README = ROOT / "README.md"
 DESIGN = ROOT / "docs" / "DESIGN.md"
 
 
 def test_readme_exists_and_is_skimmable():
     text = README.read_text(encoding="utf-8")
-    # Problem -> diagram -> how to run -> results -> limitations structure.
+    # Problem -> comparison -> how to run -> results -> limitations structure.
     for section in (
         "## Problem",
-        "## Architecture",
+        "## APM (upstream) vs this fork",
         "## How to run",
         "## Results",
         "## Limitations",
-        "## License",
     ):
         assert section in text, f"missing section: {section}"
+
+
+def test_readme_has_comparison_table_rows():
+    text = README.read_text(encoding="utf-8").lower()
+    for row in ("runtime per-call enforcement", "oidc group checks", "drift",
+                "four-eyes", "break-glass", "reports"):
+        assert row in text, f"comparison row missing: {row}"
+
+
+def test_readme_credits_and_links_upstream():
+    text = README.read_text(encoding="utf-8")
+    assert "microsoft/apm" in text
+    assert "docs/UPSTREAM-README.md" in text
+    assert (ROOT / "docs" / "UPSTREAM-README.md").exists()
 
 
 def test_readme_has_no_fabricated_metrics():
