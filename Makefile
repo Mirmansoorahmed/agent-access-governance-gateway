@@ -36,3 +36,15 @@ opa-data-check:
 # maintainer machine; CI installs the static binary).
 opa-test:
 	opa test policy/opa -v
+
+.PHONY: reports
+
+# Render the five audit reports to Markdown + PDF from committed evidence.
+# Requires the optional PDF dependency: pip install 'apm-cli[reports]'.
+# Numbers come only from the evidence inputs; nothing is hand-entered.
+reports:
+	python scripts/render_reports.py --out reports/out \
+		--spans .gateway/spans.jsonl \
+		--approvals .gateway/approvals.json \
+		--pins .gateway/pins.json \
+		--pdf

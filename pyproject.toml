@@ -58,6 +58,12 @@ dev = [
 build = [
     "pyinstaller>=6.17.0",
 ]
+# Fork-only: PDF rendering for the audit report pack (task 11). PDF reports are
+# a required deliverable; this pulls the pure-Python renderer used by
+# scripts/render_reports.py (`make reports`).
+reports = [
+    "reportlab>=4.0.0",
+]
 
 [project.scripts]
 apm = "apm_cli.entrypoint:main"
@@ -133,6 +139,8 @@ known-first-party = ["apm_cli"]
 # upstream src/apm_cli/** is allowed to call subprocess.
 "gateway/opa_client.py" = ["S603", "S607"]
 "scripts/sync_opa_data.py" = ["S101"]
+# render_reports shells out to `git` for provenance, like upstream scripts.
+"scripts/render_reports.py" = ["S603", "S607"]
 # Files using `from __future__ import annotations` with forward-reference-only
 # type imports (PEP 563). Ruff cannot resolve these without a type checker.
 "src/apm_cli/policy/ci_checks.py" = ["F821", "S603", "S607"]
