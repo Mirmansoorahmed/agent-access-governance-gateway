@@ -1,0 +1,94 @@
+# Access Governance Gateway (fork-only) CI.
+#
+# Separate from upstream APM workflows: runs the fork's lint + unit/integration
+# tests, the OPA-backed tests (installs the OPA 1.22.3 static binary), builds and
+# installs apm from THIS fork's own src/apm_cli (decision: do not depend on a
+# published release) and runs `apm audit --ci`, then the eval smoke and report
+# rendering (PDF via the optional 'reports' extra).
+name: Gateway CI
+
+on:
+  pull_request:
+    branches: [ main, governance-spec ]
+  push:
+    branches: [ governance-spec ]
+
+permissions:
+  contents: read
+
+env:
+  PYTHON_VERSION: '3.11'
+  OPA_VERSION: '1.22.3'
+
+jobs:
+  gateway:
+    name: Gateway lint, tests, OPA, apm audit, eval
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install the forked apm-cli + dev/reports extras
+        # Builds apm from this fork's src/apm_cli (editable) and installs the
+        # optional PDF/report dependency used by scripts/render_reports.py.
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev,reports]"
+
+      - name: Ruff lint (fork code)
+        run: |
+          ruff check gateway/ reports/ eval/ demo/ \
+            scripts/render_reports.py scripts/sync_opa_data.py
+
+      - name: Ruff format check (fork code)
+        run: |
+          ruff format --check gateway/ reports/ eval/ demo/ \
+            scripts/render_reports.py scripts/sync_opa_data.py
+
+      - name: Install OPA ${{ env.OPA_VERSION }}
+        run: |
+          curl -L -o /usr/local/bin/opa \
+            "https://openpolicyagent.org/downloads/v${OPA_VERSION}/opa_linux_amd64_static"
+          chmod +x /usr/local/bin/opa
+          opa version
+
+      - name: Check OPA data mirror is in sync
+        run: make opa-data-check
+
+      - name: OPA policy unit tests
+        run: make opa-test
+
+      - name: Gateway unit + integration tests (incl. OPA-backed parity)
+        run: PYTHONPATH=. python -m pytest -c pytest-gateway.ini
+
+      - name: apm audit --ci (forked apm from src/apm_cli)
+        # The fork's own apm CLI gates install/CI exactly as upstream does.
+        run: apm audit --ci
+
+      - name: Eval smoke (OPA-backed, authoritative)
+        run: |
+          mkdir -p eval/results
+          python -m eval --out eval/results/latest-opa.json --opa
+
+      - name: Render reports from the eval/demo evidence
+        # Produce the demo evidence, then render MD + PDF reports.
+        run: |
+          python -m demo.scenario
+          python scripts/render_reports.py --out reports/out \
+            --spans .gateway/spans.jsonl \
+            --approvals .gateway/approvals.json \
+            --pins .gateway/pins.json \
+            --lockfile apm.lock.yaml --pdf
+
+      - name: Upload report + eval artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: gateway-reports-and-eval
+          path: |
+            reports/out/
+            eval/results/
+          if-no-files-found: warn
