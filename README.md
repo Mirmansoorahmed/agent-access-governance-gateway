@@ -81,6 +81,8 @@ flowchart TB
   otel --> reports["Reports (MD + PDF):<br/>inventory · access · blocked · approvals · audit summary"]
 ```
 
+![Architecture](docs/architecture-v2.png)
+
 ## How to run
 
 ```bash
@@ -112,8 +114,14 @@ hand-entered. The table below is rendered from that file by
 file, then `make results-table` to refresh this section.
 
 <!-- RESULTS:BEGIN -->
-*No committed `eval/results/latest-opa.json` yet — run `make eval-opa` then
-`make results-table`. Until then: planned / to be measured.*
+| Metric | Value |
+|---|---|
+| Block rate (attack suite) | 100.0% (37 cases) |
+| Benign false-block rate | 0.0% (16 cases) |
+| Gateway overhead p50 / p95 / p99 | 10.5661 / 12.7209 / 14.1363 ms (n=200) |
+| OPA cold start | 9.4206 ms |
+
+*PDP: opa · measured 2026-11-10T19:19:05.383370+00:00 · git c29d2e1. Rendered by scripts/render_results_table.py from eval/results/latest-opa.json; not hand-entered.*
 <!-- RESULTS:END -->
 
 ## Limitations

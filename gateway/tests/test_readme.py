@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import re
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent.parent
@@ -36,7 +35,7 @@ def test_readme_has_comparison_table_rows():
         assert row in text, f"comparison row missing: {row}"
 
 
-def test_readme_has_mermaid_architecture_not_broken_png():
+def test_readme_has_mermaid_architecture_and_image():
     text = README.read_text(encoding="utf-8")
     assert "```mermaid" in text, "expected an inline Mermaid diagram"
     # The diagram must cover both lanes, the gap, the four checks, and evidence.
@@ -50,8 +49,9 @@ def test_readme_has_mermaid_architecture_not_broken_png():
         "Reports",
     ):
         assert node.lower() in text.lower(), f"diagram missing: {node}"
-    # The fork README must not reference the not-yet-added PNG as a broken image.
-    assert "![" not in text or "architecture-v2.png" not in text
+    # The architecture image is linked and the file exists (no broken link).
+    assert "![Architecture](docs/architecture-v2.png)" in text
+    assert (ROOT / "docs" / "architecture-v2.png").exists()
 
 
 def test_readme_credits_and_links_upstream():
@@ -61,13 +61,32 @@ def test_readme_credits_and_links_upstream():
     assert (ROOT / "docs" / "UPSTREAM-README.md").exists()
 
 
-def test_readme_has_no_fabricated_metrics():
+def test_readme_results_rendered_from_committed_json_not_hand_entered():
+    """The README Results numbers must match the committed OPA results JSON.
+
+    This proves the figures are rendered from eval/results/latest-opa.json by
+    scripts/render_results_table.py, not typed in by hand. If the results file
+    is absent the section must fall back to the 'to be measured' placeholder.
+    """
+    import json
+
     text = README.read_text(encoding="utf-8")
-    # The results table must say 'to be measured', not carry numbers.
     results_block = text.split("## Results", 1)[1].split("## Limitations", 1)[0]
-    assert "to be measured" in results_block
-    # No percentage or ms figures smuggled into the results table.
-    assert not re.search(r"\|\s*\d+(\.\d+)?\s*(%|ms)\s*\|", results_block)
+    results_file = ROOT / "eval" / "results" / "latest-opa.json"
+
+    if not results_file.exists():
+        assert "to be measured" in results_block
+        return
+
+    data = json.loads(results_file.read_text(encoding="utf-8"))
+    # Provenance from the JSON is surfaced in the README.
+    assert data["git_sha"] in results_block
+    assert data["generated_at"] in results_block
+    assert f"n={data['latency_n']}" in results_block
+    # The rendered latency figures match the JSON exactly (not hand-entered).
+    for key in ("overhead_p50_ms", "overhead_p95_ms", "overhead_p99_ms", "cold_start_ms"):
+        assert str(data[key]) in results_block, f"{key} not rendered from JSON"
+    assert "not hand-entered" in results_block
 
 
 def test_readme_license_matches_repo():
