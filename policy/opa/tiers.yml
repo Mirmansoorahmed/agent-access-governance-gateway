@@ -26,6 +26,9 @@ governance:
     - server: research
       tool: web_search
       groups: [advisors, partners, analysts]
+    - server: crm
+      tool: bulk_delete
+      groups: [partners]
 
   # Approval tier per (server, tool). Unlisted tools fall back to default_tier.
   tiers:
@@ -44,3 +47,8 @@ governance:
     - server: research
       tool: web_search
       tier: ask
+    # A group may be granted access yet the action is tier-denied at runtime
+    # (e.g. a destructive op kept behind an explicit runtime 'deny').
+    - server: crm
+      tool: bulk_delete
+      tier: deny

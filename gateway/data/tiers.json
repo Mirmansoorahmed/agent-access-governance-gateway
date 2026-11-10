@@ -40,6 +40,13 @@
         ],
         "server": "research",
         "tool": "web_search"
+      },
+      {
+        "groups": [
+          "partners"
+        ],
+        "server": "crm",
+        "tool": "bulk_delete"
       }
     ],
     "default_tier": "deny",
@@ -68,6 +75,11 @@
         "server": "research",
         "tier": "ask",
         "tool": "web_search"
+      },
+      {
+        "server": "crm",
+        "tier": "deny",
+        "tool": "bulk_delete"
       }
     ]
   }
