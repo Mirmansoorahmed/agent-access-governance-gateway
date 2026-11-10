@@ -146,6 +146,61 @@ def test_expired_pending_reports_timeout():
     assert decision.reason is Reason.APPROVAL_TIMEOUT
 
 
+def test_sequential_four_eyes_completes_on_second_distinct_approver():
+    store = ApprovalStore()
+    ah = args_hash({})
+    # First approver -> still partial, no grant yet.
+    assert store.approve("u1", "crm", "export_clients", ah, "four-eyes", approver="alice") is None
+    assert store.partial_approvers("u1", "crm", "export_clients", ah) == ("alice",)
+    # Same approver again -> still partial (no double count).
+    assert store.approve("u1", "crm", "export_clients", ah, "four-eyes", approver="alice") is None
+    assert store.partial_approvers("u1", "crm", "export_clients", ah) == ("alice",)
+    # Second distinct approver -> grant minted.
+    grant = store.approve("u1", "crm", "export_clients", ah, "four-eyes", approver="bob")
+    assert grant is not None
+    assert set(grant.approvers) == {"alice", "bob"}
+    assert store.consume_valid_grant("u1", "crm", "export_clients", ah) is not None
+
+
+def test_sequential_ask_grants_on_first_approve():
+    store = ApprovalStore()
+    ah = args_hash({})
+    grant = store.approve("u1", "crm", "lookup_client", ah, "ask", approver="alice")
+    assert grant is not None
+    assert grant.approvers == ("alice",)
+
+
+def test_sequential_break_glass_requires_justification():
+    store = ApprovalStore()
+    ah = args_hash({})
+    with pytest.raises(ApprovalError):
+        store.approve("u1", "billing", "issue_refund", ah, "break-glass", approver="a")
+    grant = store.approve(
+        "u1", "billing", "issue_refund", ah, "break-glass", approver="a", justification="sev1"
+    )
+    assert grant is not None
+
+
+def test_reject_clears_partial_four_eyes():
+    store = ApprovalStore()
+    ah = args_hash({})
+    store.approve("u1", "crm", "export_clients", ah, "four-eyes", approver="alice")
+    store.reject("u1", "crm", "export_clients", ah, approver="carol", reason="no")
+    assert store.partial_approvers("u1", "crm", "export_clients", ah) == ()
+
+
+def test_partial_four_eyes_persists(tmp_path):
+    path = str(tmp_path / "approvals.json")
+    store = ApprovalStore(path=path)
+    ah = args_hash({})
+    store.approve("u1", "crm", "export_clients", ah, "four-eyes", approver="alice")
+    # Second approver in a fresh process completes it.
+    reloaded = ApprovalStore(path=path)
+    grant = reloaded.approve("u1", "crm", "export_clients", ah, "four-eyes", approver="bob")
+    assert grant is not None
+    assert set(grant.approvers) == {"alice", "bob"}
+
+
 def test_store_persists_across_instances(tmp_path):
     path = str(tmp_path / "approvals.json")
     store = ApprovalStore(path=path)

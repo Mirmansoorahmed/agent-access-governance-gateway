@@ -89,6 +89,42 @@ def grant(store: ApprovalStore, agent, server, tool, args_hash_, tier, approvers
 @click.option("--server", required=True)
 @click.option("--tool", required=True)
 @click.option("--args-hash", "args_hash_", required=True)
+@click.option("--tier", required=True, type=click.Choice(["ask", "four-eyes", "break-glass"]))
+@click.option("--approver", required=True, help="This approver's id.")
+@click.option("--justification", default="", help="Required for break-glass.")
+@click.pass_obj
+def approve(store: ApprovalStore, agent, server, tool, args_hash_, tier, approver, justification):
+    """Record one approver's decision (sequential four-eyes: run twice, distinct ids)."""
+    try:
+        record = store.approve(
+            agent,
+            server,
+            tool,
+            args_hash_,
+            tier,
+            approver=approver,
+            justification=justification,
+        )
+    except ApprovalError as exc:
+        raise click.ClickException(str(exc)) from exc
+    if record is None:
+        so_far = store.partial_approvers(agent, server, tool, args_hash_)
+        click.echo(
+            f"Recorded approval by {approver} for {agent} -> {server}/{tool}. "
+            f"four-eyes needs a second distinct approver (so far: {', '.join(so_far)})."
+        )
+    else:
+        click.echo(
+            f"Granted [{record.tier}] {agent} -> {server}/{tool} "
+            f"by {', '.join(record.approvers)} (single-use, ttl={record.ttl_seconds}s)"
+        )
+
+
+@cli.command()
+@click.option("--agent", required=True)
+@click.option("--server", required=True)
+@click.option("--tool", required=True)
+@click.option("--args-hash", "args_hash_", required=True)
 @click.option("--approver", required=True)
 @click.option("--reason", default="")
 @click.pass_obj

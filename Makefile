@@ -39,12 +39,16 @@ opa-test:
 
 .PHONY: reports
 
-# Render the five audit reports to Markdown + PDF from committed evidence.
-# Requires the optional PDF dependency: pip install 'apm-cli[reports]'.
-# Numbers come only from the evidence inputs; nothing is hand-entered.
+# Render the five audit reports to Markdown + PDF. Evidence comes from a demo or
+# eval run: run `make demo` (or the eval harness) FIRST to produce the evidence
+# files under .gateway/, then `make reports`. If the evidence is missing this
+# fails closed (non-zero) rather than emitting all-zero reports. Numbers are
+# never hand-entered. Requires the optional PDF dependency:
+#   pip install 'apm-cli[reports]'.
 reports:
 	python scripts/render_reports.py --out reports/out \
 		--spans .gateway/spans.jsonl \
 		--approvals .gateway/approvals.json \
 		--pins .gateway/pins.json \
+		--lockfile apm.lock.yaml \
 		--pdf

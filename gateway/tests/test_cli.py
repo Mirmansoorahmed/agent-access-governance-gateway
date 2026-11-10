@@ -136,6 +136,36 @@ def test_break_glass_requires_justification(tmp_path):
     assert "justification" in result.output
 
 
+def test_sequential_four_eyes_via_cli(tmp_path):
+    path = _store_path(tmp_path)
+    ah = args_hash({})
+    base = [
+        "--store",
+        path,
+        "approve",
+        "--agent",
+        "u1",
+        "--server",
+        "crm",
+        "--tool",
+        "export_clients",
+        "--args-hash",
+        ah,
+        "--tier",
+        "four-eyes",
+    ]
+    # First approver: partial.
+    first = CliRunner().invoke(cli, [*base, "--approver", "alice"])
+    assert first.exit_code == 0, first.output
+    assert "needs a second distinct approver" in first.output
+    # Second distinct approver: grant minted.
+    second = CliRunner().invoke(cli, [*base, "--approver", "bob"])
+    assert second.exit_code == 0, second.output
+    assert "Granted" in second.output
+    store = ApprovalStore(path=path)
+    assert store.consume_valid_grant("u1", "crm", "export_clients", ah) is not None
+
+
 def test_deny_removes_pending_and_logs(tmp_path):
     path = _store_path(tmp_path)
     ah = args_hash({})

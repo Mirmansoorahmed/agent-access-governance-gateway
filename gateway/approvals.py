@@ -110,6 +110,8 @@ class ApprovalStore:
     _lock: threading.RLock = field(default_factory=threading.RLock, repr=False)
     _grants: dict[tuple, Grant] = field(default_factory=dict)
     _pending: dict[tuple, PendingRequest] = field(default_factory=dict)
+    # Partial four-eyes approvals: key -> {"approvers": [...], "justification": str}.
+    _partial: dict[tuple, dict] = field(default_factory=dict)
     # Append-only decision log for the Approvals report.
     log: list[dict] = field(default_factory=list)
 
@@ -136,6 +138,13 @@ class ApprovalStore:
         for entry in data.get("pending", []):
             r = PendingRequest(**entry)
             self._pending[self.key(r.agent, r.server, r.tool, r.args_hash)] = r
+        for entry in data.get("partial", []):
+            k = self.key(entry["agent"], entry["server"], entry["tool"], entry["args_hash"])
+            self._partial[k] = {
+                "approvers": list(entry.get("approvers", [])),
+                "justification": entry.get("justification", ""),
+                "tier": entry.get("tier", "four-eyes"),
+            }
         self.log = list(data.get("log", []))
 
     def _flush(self) -> None:
@@ -149,6 +158,18 @@ class ApprovalStore:
         payload = {
             "grants": [asdict(g) for g in self._grants.values()],
             "pending": [asdict(r) for r in self._pending.values()],
+            "partial": [
+                {
+                    "agent": k[0],
+                    "server": k[1],
+                    "tool": k[2],
+                    "args_hash": k[3],
+                    "approvers": v["approvers"],
+                    "justification": v.get("justification", ""),
+                    "tier": v.get("tier", "four-eyes"),
+                }
+                for k, v in self._partial.items()
+            ],
             "log": self.log,
         }
         p.write_text(json.dumps(payload, indent=2, sort_keys=True), encoding="utf-8")
@@ -223,11 +244,88 @@ class ApprovalStore:
             self._flush()
             return grant
 
+    def approve(
+        self,
+        agent: str,
+        server: str,
+        tool: str,
+        ah: str,
+        tier: str,
+        approver: str,
+        justification: str = "",
+    ) -> Grant | None:
+        """Sequential approval: accumulate distinct approvers until the tier is met.
+
+        - ``ask`` / ``break-glass``: a single ``approve`` mints the grant.
+        - ``four-eyes``: the first approver is recorded as partial; a second,
+          **distinct** approver completes and mints the grant. A repeat approval
+          from the same identity does not count twice.
+
+        Returns the :class:`Grant` once minted, else ``None`` while still partial.
+        The one-command :meth:`grant` form remains available for a batch decision.
+        """
+        if not approver:
+            raise ApprovalError("approve requires an approver id")
+        with self._lock:
+            if tier != "four-eyes":
+                return self.grant(
+                    agent,
+                    server,
+                    tool,
+                    ah,
+                    tier,
+                    approvers=(approver,),
+                    justification=justification,
+                )
+            key = self.key(agent, server, tool, ah)
+            state = self._partial.setdefault(
+                key, {"approvers": [], "justification": "", "tier": "four-eyes"}
+            )
+            if justification and not state["justification"]:
+                state["justification"] = justification
+            if approver not in state["approvers"]:
+                state["approvers"].append(approver)
+                self.log.append(
+                    {
+                        "event": "approve",
+                        "agent": agent,
+                        "server": server,
+                        "tool": tool,
+                        "args_hash": ah,
+                        "tier": tier,
+                        "approver": approver,
+                        "ts": _now(),
+                    }
+                )
+            if len(state["approvers"]) >= 2:
+                approvers = tuple(state["approvers"])
+                justification = state["justification"]
+                del self._partial[key]
+                self._flush()
+                return self.grant(
+                    agent,
+                    server,
+                    tool,
+                    ah,
+                    tier,
+                    approvers=approvers,
+                    justification=justification,
+                )
+            self._flush()
+            return None
+
+    def partial_approvers(self, agent: str, server: str, tool: str, ah: str) -> tuple[str, ...]:
+        """Return approvers recorded so far for an in-progress four-eyes flow."""
+        with self._lock:
+            state = self._partial.get(self.key(agent, server, tool, ah))
+            return tuple(state["approvers"]) if state else ()
+
     def reject(
         self, agent: str, server: str, tool: str, ah: str, approver: str, reason: str = ""
     ) -> None:
         with self._lock:
             self._pending.pop(self.key(agent, server, tool, ah), None)
+            self._partial.pop(self.key(agent, server, tool, ah), None)
             self.log.append(
                 {
                     "event": "reject",

@@ -11,21 +11,31 @@ be traced to a span or log entry.
 from __future__ import annotations
 
 __all__ = [
+    "REPORTS",
+    "ReportDoc",
     "ReportInputs",
+    "Table",
     "access_by_group_md",
     "approvals_md",
     "audit_summary_md",
     "blocked_activity_md",
+    "build_doc",
     "generate_all",
+    "render_markdown",
     "tool_inventory_md",
 ]
 
 from .generate import (
+    REPORTS,
+    ReportDoc,
     ReportInputs,
+    Table,
     access_by_group_md,
     approvals_md,
     audit_summary_md,
     blocked_activity_md,
+    build_doc,
     generate_all,
+    render_markdown,
     tool_inventory_md,
 )
