@@ -1,0 +1,23 @@
+# Minimal OpenTelemetry Collector config for the lab: receive OTLP, log spans
+# locally. No cloud exporter -- evidence stays lab-local (R9.3).
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+processors:
+  batch: {}
+
+exporters:
+  debug:
+    verbosity: detailed
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [debug]

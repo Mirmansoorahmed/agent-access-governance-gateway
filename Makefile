@@ -64,3 +64,18 @@ eval:
 # The numbers in this file are the ones that may be cited.
 eval-opa:
 	python -m eval --out eval/results/latest-opa.json --opa
+
+.PHONY: demo
+
+# Run the 10-minute Northwind demo offline (no Docker): exercise the five-stage
+# scenario against the in-process gateway, write evidence to .gateway/, then
+# render the reports. The full Docker lab is `docker compose -f
+# demo/docker-compose.yml up` (OPA + Keycloak + OTel + gateway).
+demo:
+	python -m demo.scenario
+	python scripts/render_reports.py --out reports/out \
+		--spans .gateway/spans.jsonl \
+		--approvals .gateway/approvals.json \
+		--pins .gateway/pins.json \
+		--lockfile apm.lock.yaml
+	@echo "Demo evidence in .gateway/ ; reports in reports/out/ (run 'make reports' for PDFs)."
