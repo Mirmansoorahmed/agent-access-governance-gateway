@@ -1,0 +1,494 @@
+{
+  "attack_total": 37,
+  "benign_false_block_rate": 0.0,
+  "benign_total": 16,
+  "block_rate": 1.0,
+  "cases": [
+    {
+      "actual_allowed": false,
+      "correct": true,
+      "expected_allowed": false,
+      "expected_reason": "no-allowlist",
+      "kind": "attack",
+      "name": "allowlist-miss-hr",
+      "reason": "no-allowlist"
+    },
+    {
+      "actual_allowed": false,
+      "correct": true,
+      "expected_allowed": false,
+      "expected_reason": "policy-deny",
+      "kind": "attack",
+      "name": "allowlist-deny-legal",
+      "reason": "policy-deny"
+    },
+    {
+      "actual_allowed": false,
+      "correct": true,
+      "expected_allowed": false,
+      "expected_reason": "no-allowlist",
+      "kind": "attack",
+      "name": "allowlist-miss-hr-0",
+      "reason": "no-allowlist"
+    },
+    {
+      "actual_allowed": false,
+      "correct": true,
+      "expected_allowed": false,
+      "expected_reason": "no-allowlist",
+      "kind": "attack",
+      "name": "allowlist-miss-hr-1",
+      "reason": "no-allowlist"
+    },
+    {
+      "actual_allowed": false,
+      "correct": true,
+      "expected_allowed": false,
+      "expected_reason": "no-allowlist",
+      "kind": "attack",
+      "name": "allowlist-miss-hr-2",
+      "reason": "no-allowlist"
+    },
+    {
+      "actual_allowed": false,
+      "correct": true,
+      "expected_allowed": false,
+      "expected_reason": "group-denied",
+      "kind": "attack",
+      "name": "wrong-group-crm-lookup_client-0",
+      "reason": "group-denied"
+    },
+    {
+      "actual_allowed": false,
+      "correct": true,
+      "expected_allowed": false,
+      "expected_reason": "group-denied",
+      "kind": "attack",
+      "name": "wrong-group-crm-export_clients-1",
+      "reason": "group-denied"
+    },
+    {
+      "actual_allowed": false,
+      "correct": true,
+      "expected_allowed": false,
+      "expected_reason": "group-denied",
+      "kind": "attack",
+      "name": "wrong-group-billing-issue_refund-2",
+      "reason": "group-denied"
+    },
+    {
+      "actual_allowed": false,
+      "correct": true,
+      "expected_allowed": false,
+      "expected_reason": "group-denied",
+      "kind": "attack",
+      "name": "wrong-group-billing-read_invoice-3",
+      "reason": "group-denied"
+    },
+    {
+      "actual_allowed": false,
+      "correct": true,
+      "expected_allowed": false,
+      "expected_reason": "group-denied",
+      "kind": "attack",
+      "name": "wrong-group-research-web_search-4",
+      "reason": "group-denied"
+    },
+    {
+      "actual_allowed": false,
+      "correct": true,
+      "expected_allowed": false,
+      "expected_reason": "group-denied",
+      "kind": "attack",
+      "name": "wrong-group-crm-lookup_client-5",
+      "reason": "group-denied"
+    },
+    {
+      "actual_allowed": false,
+      "correct": true,
+      "expected_allowed": false,
+      "expected_reason": "group-denied",
+      "kind": "attack",
+      "name": "wrong-group-crm-export_clients-6",
+      "reason": "group-denied"
+    },
+    {
+      "actual_allowed": false,
+      "correct": true,
+      "expected_allowed": false,
+      "expected_reason": "group-denied",
+      "kind": "attack",
+      "name": "wrong-group-billing-issue_refund-7",
+      "reason": "group-denied"
+    },
+    {
+      "actual_allowed": false,
+      "correct": true,
+      "expected_allowed": false,
+      "expected_reason": "description-drift",
+      "kind": "attack",
+      "name": "drift-crm-export_clients-0",
+      "reason": "description-drift"
+    },
+    {
+      "actual_allowed": false,
+      "correct": true,
+      "expected_allowed": false,
+      "expected_reason": "description-drift",
+      "kind": "attack",
+      "name": "drift-billing-read_invoice-1",
+      "reason": "description-drift"
+    },
+    {
+      "actual_allowed": false,
+      "correct": true,
+      "expected_allowed": false,
+      "expected_reason": "description-drift",
+      "kind": "attack",
+      "name": "drift-billing-issue_refund-2",
+      "reason": "description-drift"
+    },
+    {
+      "actual_allowed": false,
+      "correct": true,
+      "expected_allowed": false,
+      "expected_reason": "description-drift",
+      "kind": "attack",
+      "name": "drift-research-web_search-3",
+      "reason": "description-drift"
+    },
+    {
+      "actual_allowed": false,
+      "correct": true,
+      "expected_allowed": false,
+      "expected_reason": "description-drift",
+      "kind": "attack",
+      "name": "unpinned-crm-export_clients-0",
+      "reason": "description-drift"
+    },
+    {
+      "actual_allowed": false,
+      "correct": true,
+      "expected_allowed": false,
+      "expected_reason": "description-drift",
+      "kind": "attack",
+      "name": "unpinned-billing-read_invoice-1",
+      "reason": "description-drift"
+    },
+    {
+      "actual_allowed": false,
+      "correct": true,
+      "expected_allowed": false,
+      "expected_reason": "description-drift",
+      "kind": "attack",
+      "name": "unpinned-research-web_search-2",
+      "reason": "description-drift"
+    },
+    {
+      "actual_allowed": false,
+      "correct": true,
+      "expected_allowed": false,
+      "expected_reason": "approval-rejected",
+      "kind": "attack",
+      "name": "risky-no-approval-0",
+      "reason": "approval-rejected"
+    },
+    {
+      "actual_allowed": false,
+      "correct": true,
+      "expected_allowed": false,
+      "expected_reason": "approval-rejected",
+      "kind": "attack",
+      "name": "risky-no-approval-1",
+      "reason": "approval-rejected"
+    },
+    {
+      "actual_allowed": false,
+      "correct": true,
+      "expected_allowed": false,
+      "expected_reason": "approval-rejected",
+      "kind": "attack",
+      "name": "risky-no-approval-2",
+      "reason": "approval-rejected"
+    },
+    {
+      "actual_allowed": false,
+      "correct": true,
+      "expected_allowed": false,
+      "expected_reason": "approval-rejected",
+      "kind": "attack",
+      "name": "risky-no-approval-3",
+      "reason": "approval-rejected"
+    },
+    {
+      "actual_allowed": false,
+      "correct": true,
+      "expected_allowed": false,
+      "expected_reason": "approval-rejected",
+      "kind": "attack",
+      "name": "risky-no-approval-4",
+      "reason": "approval-rejected"
+    },
+    {
+      "actual_allowed": false,
+      "correct": true,
+      "expected_allowed": false,
+      "expected_reason": "approval-rejected",
+      "kind": "attack",
+      "name": "four-eyes-same-approver-twice",
+      "reason": "approval-rejected"
+    },
+    {
+      "actual_allowed": false,
+      "correct": true,
+      "expected_allowed": false,
+      "expected_reason": "approval-rejected",
+      "kind": "attack",
+      "name": "four-eyes-single-approver",
+      "reason": "approval-rejected"
+    },
+    {
+      "actual_allowed": false,
+      "correct": true,
+      "expected_allowed": false,
+      "expected_reason": "group-denied",
+      "kind": "attack",
+      "name": "break-glass-wrong-group",
+      "reason": "group-denied"
+    },
+    {
+      "actual_allowed": false,
+      "correct": true,
+      "expected_allowed": false,
+      "expected_reason": "approval-rejected",
+      "kind": "attack",
+      "name": "break-glass-no-justification",
+      "reason": "approval-rejected"
+    },
+    {
+      "actual_allowed": false,
+      "correct": true,
+      "expected_allowed": false,
+      "expected_reason": "tier-deny",
+      "kind": "attack",
+      "name": "tier-deny-bulk-delete",
+      "reason": "tier-deny"
+    },
+    {
+      "actual_allowed": false,
+      "correct": true,
+      "expected_allowed": false,
+      "expected_reason": "approval-timeout",
+      "kind": "attack",
+      "name": "approval-timeout",
+      "reason": "approval-timeout"
+    },
+    {
+      "actual_allowed": false,
+      "correct": true,
+      "expected_allowed": false,
+      "expected_reason": "identity-invalid",
+      "kind": "attack",
+      "name": "malformed-token",
+      "reason": "identity-invalid"
+    },
+    {
+      "actual_allowed": false,
+      "correct": true,
+      "expected_allowed": false,
+      "expected_reason": "identity-invalid",
+      "kind": "attack",
+      "name": "empty-token",
+      "reason": "identity-invalid"
+    },
+    {
+      "actual_allowed": false,
+      "correct": true,
+      "expected_allowed": false,
+      "expected_reason": "identity-invalid",
+      "kind": "attack",
+      "name": "bad-signature-token",
+      "reason": "identity-invalid"
+    },
+    {
+      "actual_allowed": false,
+      "correct": true,
+      "expected_allowed": false,
+      "expected_reason": "identity-invalid",
+      "kind": "attack",
+      "name": "token-missing-sub",
+      "reason": "identity-invalid"
+    },
+    {
+      "actual_allowed": false,
+      "correct": true,
+      "expected_allowed": false,
+      "expected_reason": "policy-load-failed",
+      "kind": "attack",
+      "name": "policy-unavailable",
+      "reason": "policy-load-failed"
+    },
+    {
+      "actual_allowed": false,
+      "correct": true,
+      "expected_allowed": false,
+      "expected_reason": "policy-load-failed",
+      "kind": "attack",
+      "name": "lockfile-unavailable",
+      "reason": "policy-load-failed"
+    },
+    {
+      "actual_allowed": true,
+      "correct": true,
+      "expected_allowed": true,
+      "expected_reason": "allow",
+      "kind": "benign",
+      "name": "golden-allow-0",
+      "reason": "allow"
+    },
+    {
+      "actual_allowed": true,
+      "correct": true,
+      "expected_allowed": true,
+      "expected_reason": "allow",
+      "kind": "benign",
+      "name": "golden-allow-1",
+      "reason": "allow"
+    },
+    {
+      "actual_allowed": true,
+      "correct": true,
+      "expected_allowed": true,
+      "expected_reason": "allow",
+      "kind": "benign",
+      "name": "golden-allow-2",
+      "reason": "allow"
+    },
+    {
+      "actual_allowed": true,
+      "correct": true,
+      "expected_allowed": true,
+      "expected_reason": "allow",
+      "kind": "benign",
+      "name": "golden-allow-3",
+      "reason": "allow"
+    },
+    {
+      "actual_allowed": true,
+      "correct": true,
+      "expected_allowed": true,
+      "expected_reason": "allow",
+      "kind": "benign",
+      "name": "golden-allow-4",
+      "reason": "allow"
+    },
+    {
+      "actual_allowed": true,
+      "correct": true,
+      "expected_allowed": true,
+      "expected_reason": "break-glass-granted",
+      "kind": "benign",
+      "name": "break-glass-granted",
+      "reason": "break-glass-granted"
+    },
+    {
+      "actual_allowed": true,
+      "correct": true,
+      "expected_allowed": true,
+      "expected_reason": "allow",
+      "kind": "benign",
+      "name": "golden-lookup-0",
+      "reason": "allow"
+    },
+    {
+      "actual_allowed": true,
+      "correct": true,
+      "expected_allowed": true,
+      "expected_reason": "allow",
+      "kind": "benign",
+      "name": "golden-lookup-1",
+      "reason": "allow"
+    },
+    {
+      "actual_allowed": true,
+      "correct": true,
+      "expected_allowed": true,
+      "expected_reason": "allow",
+      "kind": "benign",
+      "name": "golden-lookup-2",
+      "reason": "allow"
+    },
+    {
+      "actual_allowed": true,
+      "correct": true,
+      "expected_allowed": true,
+      "expected_reason": "allow",
+      "kind": "benign",
+      "name": "golden-lookup-3",
+      "reason": "allow"
+    },
+    {
+      "actual_allowed": true,
+      "correct": true,
+      "expected_allowed": true,
+      "expected_reason": "allow",
+      "kind": "benign",
+      "name": "golden-lookup-4",
+      "reason": "allow"
+    },
+    {
+      "actual_allowed": true,
+      "correct": true,
+      "expected_allowed": true,
+      "expected_reason": "allow",
+      "kind": "benign",
+      "name": "golden-lookup-5",
+      "reason": "allow"
+    },
+    {
+      "actual_allowed": true,
+      "correct": true,
+      "expected_allowed": true,
+      "expected_reason": "allow",
+      "kind": "benign",
+      "name": "golden-lookup-6",
+      "reason": "allow"
+    },
+    {
+      "actual_allowed": true,
+      "correct": true,
+      "expected_allowed": true,
+      "expected_reason": "allow",
+      "kind": "benign",
+      "name": "golden-lookup-7",
+      "reason": "allow"
+    },
+    {
+      "actual_allowed": true,
+      "correct": true,
+      "expected_allowed": true,
+      "expected_reason": "allow",
+      "kind": "benign",
+      "name": "golden-lookup-8",
+      "reason": "allow"
+    },
+    {
+      "actual_allowed": true,
+      "correct": true,
+      "expected_allowed": true,
+      "expected_reason": "allow",
+      "kind": "benign",
+      "name": "golden-lookup-9",
+      "reason": "allow"
+    }
+  ],
+  "cold_start_ms": 9.4206,
+  "generated_at": "2026-11-10T19:19:05.383370+00:00",
+  "git_sha": "c29d2e1",
+  "latency_n": 200,
+  "overhead_p50_ms": 10.5661,
+  "overhead_p95_ms": 12.7209,
+  "overhead_p99_ms": 14.1363,
+  "pdp": "opa",
+  "total": 53
+}
