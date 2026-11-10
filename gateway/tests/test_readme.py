@@ -25,8 +25,14 @@ def test_readme_exists_and_is_skimmable():
 
 def test_readme_has_comparison_table_rows():
     text = README.read_text(encoding="utf-8").lower()
-    for row in ("runtime per-call enforcement", "oidc group checks", "drift",
-                "four-eyes", "break-glass", "reports"):
+    for row in (
+        "runtime per-call enforcement",
+        "oidc group claims",
+        "drift",
+        "four-eyes",
+        "break-glass",
+        "reports",
+    ):
         assert row in text, f"comparison row missing: {row}"
 
 
@@ -34,8 +40,15 @@ def test_readme_has_mermaid_architecture_not_broken_png():
     text = README.read_text(encoding="utf-8")
     assert "```mermaid" in text, "expected an inline Mermaid diagram"
     # The diagram must cover both lanes, the gap, the four checks, and evidence.
-    for node in ("apm audit --ci", "GAP", "Gateway PEP", "drift pin",
-                 "four-eyes", "evidence", "Reports"):
+    for node in (
+        "apm audit --ci",
+        "GAP",
+        "Gateway PEP",
+        "drift pin",
+        "four-eyes",
+        "evidence",
+        "Reports",
+    ):
         assert node.lower() in text.lower(), f"diagram missing: {node}"
     # The fork README must not reference the not-yet-added PNG as a broken image.
     assert "![" not in text or "architecture-v2.png" not in text

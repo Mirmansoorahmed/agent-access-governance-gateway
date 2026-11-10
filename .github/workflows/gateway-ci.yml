@@ -42,12 +42,14 @@ jobs:
       - name: Ruff lint (fork code)
         run: |
           ruff check gateway/ reports/ eval/ demo/ \
-            scripts/render_reports.py scripts/sync_opa_data.py
+            scripts/render_reports.py scripts/sync_opa_data.py \
+            scripts/render_results_table.py
 
       - name: Ruff format check (fork code)
         run: |
           ruff format --check gateway/ reports/ eval/ demo/ \
-            scripts/render_reports.py scripts/sync_opa_data.py
+            scripts/render_reports.py scripts/sync_opa_data.py \
+            scripts/render_results_table.py
 
       - name: Install OPA ${{ env.OPA_VERSION }}
         run: |

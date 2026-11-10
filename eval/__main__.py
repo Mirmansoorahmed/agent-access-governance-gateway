@@ -1,12 +1,14 @@
 """Run the eval harness and persist results.
 
-    python -m eval --out eval/results/latest.json           # LocalPdp
-    python -m eval --out eval/results/latest.json --opa      # real OPA PDP
+    python -m eval                 # LocalPdp  -> eval/results/latest.json
+    python -m eval --opa           # real OPA  -> eval/results/latest-opa.json
 
-With ``--opa`` the runner uses the real ``opa`` binary against policy/opa, so the
-maintainer / CI produce the authoritative, OPA-backed results file whose numbers
-may be cited. Exits non-zero if any case outcome is incorrect (so CI smoke fails
-loudly on a regression).
+``--out`` overrides the destination. Without it, the default depends on the PDP
+so bare ``python -m eval --opa`` matches ``make eval-opa``. With ``--opa`` the
+runner uses the real ``opa`` binary against policy/opa, producing the
+authoritative, OPA-backed results file whose numbers may be cited. Exits
+non-zero if any case outcome is incorrect (so CI smoke fails loudly on a
+regression).
 """
 
 from __future__ import annotations
@@ -18,10 +20,15 @@ from gateway.opa_client import SubprocessOpaPdp, opa_available
 
 from .runner import run_suite, write_result
 
+# PDP-specific default output paths (used when --out is not given).
+_DEFAULT_LOCAL_OUT = "eval/results/latest.json"
+_DEFAULT_OPA_OUT = "eval/results/latest-opa.json"
+
 
 def main(argv: list[str]) -> int:
     parser = argparse.ArgumentParser(description="Access Governance Gateway eval harness.")
-    parser.add_argument("--out", default="eval/results/latest.json")
+    # Default resolved after parsing so it can depend on --opa.
+    parser.add_argument("--out", default=None)
     parser.add_argument("--opa", action="store_true", help="Use the real OPA binary as the PDP.")
     args = parser.parse_args(argv)
 
@@ -35,12 +42,13 @@ def main(argv: list[str]) -> int:
         pdp = None
         label = "local"
 
+    out = args.out or (_DEFAULT_OPA_OUT if args.opa else _DEFAULT_LOCAL_OUT)
     result = run_suite(pdp=pdp, pdp_label=label)
-    write_result(result, args.out)
+    write_result(result, out)
     print(
         f"Eval ({label}): block_rate={result.block_rate} "
         f"benign_false_block_rate={result.benign_false_block_rate} "
-        f"p50={result.overhead_p50_ms}ms p95={result.overhead_p95_ms}ms -> {args.out}"
+        f"p50={result.overhead_p50_ms}ms p95={result.overhead_p95_ms}ms -> {out}"
     )
 
     incorrect = [c for c in result.cases if not c["correct"]]

@@ -28,7 +28,7 @@ touching upstream APM code (`src/apm_cli/**` is imported read-only).
 | Install-time dependency/MCP allowlist (`apm-policy.yml`) | ✅ | ✅ (unchanged, reused) |
 | CI gate (`apm audit --ci`) | ✅ | ✅ (run in fork CI) |
 | **Runtime per-call enforcement** of `tools/call` | ❌ (not a runtime sandbox) | ✅ Policy Enforcement Point |
-| **OIDC group checks** (role / department / seniority) | ❌ (no identity in schema) | ✅ via OPA (Keycloak default) |
+| **OIDC group claims** (per-call caller identity) | ❌ (no identity in schema) | ✅ via OPA — group matching (Keycloak default) |
 | **Live tool-description drift** detection | ❌ (install-time file hashes only) | ✅ SHA-256 pin per approved tool |
 | **Approval tiers** `allow`/`ask`/`deny` | ❌ | ✅ |
 | **Four-eyes** (two distinct approvers) | ❌ | ✅ sequential or one-shot |
@@ -41,8 +41,7 @@ touching upstream APM code (`src/apm_cli/**` is imported read-only).
 The top lane is upstream APM (install-time); the gap is what it does **not** do;
 the bottom lane is this fork's runtime gateway. All four checks must pass to
 auto-allow, and the gateway **fails closed** if policy, lockfile, or OPA cannot
-be loaded. (The maintainer will add a rendered `docs/architecture-v2.png`; this
-Mermaid diagram is the source of truth meanwhile.)
+be loaded.
 
 ```mermaid
 flowchart TB
@@ -60,7 +59,7 @@ flowchart TB
   subgraph FORK["Run-time — Access Governance Gateway (this fork)"]
     direction TB
     agent["AI agent"] -->|MCP tools/call| pep["Gateway PEP"]
-    oidc["OIDC / Keycloak<br/>role · dept · seniority"] --> pep
+    oidc["OIDC / Keycloak<br/>group claims"] --> pep
     policy -. same policy + lockfile, read-only .-> pep
     pep --> c1{"1 · tool approved?<br/>allowlist, deny wins"}
     c1 -->|deny| blocked["BLOCK (reason code)"]
@@ -128,6 +127,9 @@ file, then `make results-table` to refresh this section.
 - Single gateway is a deliberate PEP and a single point of failure; HA is out of
   scope for v1.
 - Keycloak is the default IdP; Entra is an optional adapter stub, not required.
+- Check 2 currently matches on OIDC **group** claims. The token also carries
+  `role` / `department` / `seniority`, but mapping access to those finer claims
+  in Rego is **future work**.
 - The **Audit Summary** maps controls to ISO/IEC 42001 Annex A themes and EU AI
   Act Art. 12 / 14 **illustratively** — not a conformity claim.
 
