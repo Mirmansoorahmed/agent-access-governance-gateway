@@ -36,24 +36,50 @@ touching upstream APM code (`src/apm_cli/**` is imported read-only).
 | **Evidence** per decision | lockfile + SARIF | ✅ OpenTelemetry span (args redacted) |
 | **Auditor reports** (MD + PDF) | ❌ | ✅ 5 reports, derived from evidence |
 
-Check order on every call (all must pass to auto-allow; **fails closed** if
-policy, lockfile, or OPA can't be loaded):
+## Architecture
 
-```
-  apm.yml ──install──▶ apm.lock.yaml ──apm audit --ci──▶ CI gate     (UPSTREAM, unchanged)
-  apm-policy.yml  ─────────────── same policy, read-only ───────────────┐
-                                                                        ▼
-  AI agent ──MCP tools/call──▶  GATEWAY (PEP)  ──▶ MCP server          (THIS FORK)
-                                 1 tool approved? (allowlist, deny wins)
-      OIDC (Keycloak) ────────▶  2 group allowed? (OPA: role/dept/seniority)
-                                 3 description unchanged? (SHA-256 pin)
-                                 4 approval tier? allow|ask|deny|four-eyes|break-glass
-                                        │                     │
-                                        ▼                     ▼
-                              OTel evidence log      approval CLI (grants)
-                                        │
-                                        ▼
-                       reports: inventory · access · blocked · approvals · audit summary (MD + PDF)
+The top lane is upstream APM (install-time); the gap is what it does **not** do;
+the bottom lane is this fork's runtime gateway. All four checks must pass to
+auto-allow, and the gateway **fails closed** if policy, lockfile, or OPA cannot
+be loaded. (The maintainer will add a rendered `docs/architecture-v2.png`; this
+Mermaid diagram is the source of truth meanwhile.)
+
+```mermaid
+flowchart TB
+  subgraph APM["Install-time — Microsoft APM (upstream, unchanged)"]
+    direction LR
+    manifest["apm.yml"] -->|apm install| lock["apm.lock.yaml"]
+    policy["apm-policy.yml<br/>(allowlist, deny, transports)"] --> audit["apm audit --ci"]
+    lock --> audit
+    audit --> cigate["CI gate (pass/fail PR)"]
+  end
+
+  gap["GAP: APM is not a runtime sandbox —<br/>no per-call identity, drift, or approval checks"]
+  APM --> gap
+
+  subgraph FORK["Run-time — Access Governance Gateway (this fork)"]
+    direction TB
+    agent["AI agent"] -->|MCP tools/call| pep["Gateway PEP"]
+    oidc["OIDC / Keycloak<br/>role · dept · seniority"] --> pep
+    policy -. same policy + lockfile, read-only .-> pep
+    pep --> c1{"1 · tool approved?<br/>allowlist, deny wins"}
+    c1 -->|deny| blocked["BLOCK (reason code)"]
+    c1 -->|pass| c2{"2 · group allowed?<br/>OPA / Rego"}
+    c2 -->|deny| blocked
+    c2 -->|pass| c3{"3 · description unchanged?<br/>SHA-256 drift pin"}
+    c3 -->|mismatch| blocked
+    c3 -->|pass| c4{"4 · approval tier?<br/>allow·ask·deny·four-eyes·break-glass"}
+    c4 -->|deny / timeout| blocked
+    c4 -->|needs human| approve["Approval CLI<br/>single-use grant"]
+    approve --> allow["ALLOW → forward to MCP server"]
+    c4 -->|allow| allow
+  end
+
+  gap --> FORK
+
+  allow --> otel["OpenTelemetry evidence<br/>(args redacted)"]
+  blocked --> otel
+  otel --> reports["Reports (MD + PDF):<br/>inventory · access · blocked · approvals · audit summary"]
 ```
 
 ## How to run
